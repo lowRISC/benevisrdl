@@ -1,0 +1,31 @@
+[project]
+name = "rdl2ot"
+version = "0.0.0"
+description = "An extension of PeakRDL to generate Opentitan RTL."
+requires-python = ">=3.10"
+dependencies = [
+  # Dependency management
+  "uv==0.6.1",
+  # Linters
+  "flake8 ~= 7.1",
+  "isort==5.10.1",
+  "mypy==0.971",
+  "yapf==0.32.0",
+  "ruff>=0.9.6",
+  "click>=8.2.1",
+]
+
+[tool.setuptools]
+# This is actually not a python project, we just use pyproject.toml to manage dependencies.
+py-modules = []
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+# Don't lint vendored files which must be fixed upstream.
+extend-exclude = [ "*vendor*" ]
+
+[tool.ruff.lint]
+preview = true
+explicit-preview-rules = true
+extend-select = ["E", "E303", "W391"]
