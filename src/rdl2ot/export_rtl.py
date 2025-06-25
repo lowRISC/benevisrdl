@@ -7,6 +7,7 @@ import json
 import opentitan
 
 TEMPLATES_DIR = './src/templates'
+DEFAULT_INTERFACE_NAME = 'regs'
 
 def run(rdlc: RDLCompiler, obj: node.RootNode, out_dir: str):
     factory = OtInterfaceBuilder(rdlc)
@@ -147,15 +148,18 @@ class OtInterfaceBuilder:
         res = [{"name" : param.name,  "type" : param.type_,  "value": param.value} for param in local_params]
         return res
 
-    def get_interface(self, addrmap: node.AddrmapNode) -> dict:
+    def get_interface(self, addrmap: node.AddrmapNode, name: None|str = None) -> dict:
         """
         Parse an interface and return a dictionary.
         """
+        self.last_offset = 0
+        self.num_regs = 0
+
         if addrmap.is_array:
             print(f"WARNING: Unsupported array type: {type(addrmap)}, skiping...")
 
         interface = dict()
-        interface['name'] = addrmap.inst_name
+        interface['name'] = name if name else addrmap.inst_name
         if isinstance(addrmap, node.AddrmapNode):
             print(addrmap.inst_name)
             interface['type'] = 'addrmap'
@@ -170,11 +174,11 @@ class OtInterfaceBuilder:
         interface['windows'] = []
         for child in addrmap.children():
             if isinstance(child, node.RegNode):
-                json_child = self.get_reg(child)
-                interface['regs'].append(json_child)
+                child_obj = self.get_reg(child)
+                interface['regs'].append(child_obj)
             elif isinstance(child, node.MemNode):
-                json_child = self.get_mem(child)
-                interface['windows'].append(json_child)
+                child_obj = self.get_mem(child)
+                interface['windows'].append(child_obj)
             else:
                 print(f"WARNING: Unsupported type: {type(child)}, skiping...")
                 continue
@@ -204,18 +208,18 @@ class OtInterfaceBuilder:
         obj['interfaces'] = []
         for child in root.children():
             if isinstance(child, node.AddrmapNode):
-                json_child = self.get_interface(child)
-                obj['interfaces'].append(json_child)
-            # elif isinstance(child, node.RegNode):
-            #     ref = list(filter(lambda v: v['name'] == 'regs', obj['interfaces']))
-            #     if len(ref) == 0:
-            #         obj['interfaces'].add({'name': 'regs', 'type':'addrmap', 'offset':0, 'regs':[], 'windows':[], 'offset_bits'})
-            #     json_child = self.get_reg(child)
+                child_obj = self.get_interface(child)
+                obj['interfaces'].append(child_obj)
+            elif isinstance(child, node.RegNode):
+                continue
             else:
                 print(f"Error: Unsupported type: {type(child)}, top level only supports addrmap and reg components.")
-                continue
-            self.last_offset = 0
-            self.num_regs = 0
+                raise RuntimeError
+
+        # If the root contain imediate registers, use a default interface name
+        if len(root.registers()) > 0:
+            interface = self.get_interface(root, name=DEFAULT_INTERFACE_NAME)
+            obj['interfaces'].append(interface)
 
         return obj
 

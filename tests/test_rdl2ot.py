@@ -15,8 +15,7 @@ def run_cli_tool(input_file_path: Path, output_dir_path: Path):
     result = subprocess.run(command, capture_output=True, text=True, check=False)
     return result
 
-def test_cli_lc_ctrl(tmp_path: Path):
-    ip_block = "lc_ctrl"
+def run_ip_test(tmp_path: Path, ip_block: str):
     for outfile in ["reg_pkg.sv", "reg_top.sv"]:
         input_rdl = SNAPSHOTS_DIR / f"{ip_block}.rdl"
         snapshot_file = (SNAPSHOTS_DIR / f"{ip_block}_{outfile}")
@@ -29,4 +28,10 @@ def test_cli_lc_ctrl(tmp_path: Path):
         actual_output_content = output_file.read_text(encoding='utf-8')
 
         assert actual_output_content == snapshot_content, \
-        f"Output mismatch : Run `meld {snapshot_file} {output_file}`"
+                f"Output mismatch, to debug, run:\nmeld {output_file} {snapshot_file}\n"
+
+def test_cli_lc_ctrl(tmp_path: Path):
+    run_ip_test(tmp_path, "lc_ctrl")
+
+def test_cli_uart(tmp_path: Path):
+    run_ip_test(tmp_path, "uart")
