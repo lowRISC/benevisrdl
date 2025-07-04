@@ -143,7 +143,7 @@ class OtInterfaceBuilder:
         """
         local_params = list(filter(lambda x: x == "localparam", obj.list_properties()))
         if len(local_params) < 1:
-            print(f"WARNING: Localparams not found.")
+            print("WARNING: Localparams not found.")
             return None
         local_params = list(local_params)[0]
         local_params = obj.get_property(local_params)
@@ -197,10 +197,10 @@ class OtInterfaceBuilder:
         Parse the root node and return a dictionary representing a window.
         """
         if root.is_array:
-            print(f"Error: Unsupported array type on the top")
+            print("Error: Unsupported array type on the top")
             raise RuntimeError
         if not isinstance(root, node.AddrmapNode):
-            print(f"Error: Top level must be an addrmap")
+            print("Error: Top level must be an addrmap")
             raise RuntimeError
 
         obj = dict()
@@ -219,7 +219,8 @@ class OtInterfaceBuilder:
                 continue
             else:
                 print(
-                    f"Error: Unsupported type: {type(child)}, top level only supports addrmap and reg components."
+                    f"""Error: Unsupported type: {type(child)}, top level only supports 
+                      addrmap and reg components."""
                 )
                 raise RuntimeError
 
