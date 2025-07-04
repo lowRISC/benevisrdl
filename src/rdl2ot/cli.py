@@ -3,9 +3,11 @@
 import click
 import sys
 
+
 @click.group()
 def main():
     pass
+
 
 @main.command()
 @click.argument(
@@ -21,6 +23,7 @@ def main():
 )
 def export_rtl(input_file: str, out_dir: str):
     from systemrdl import RDLCompiler, RDLCompileError
+
     rdlc = RDLCompiler()
     try:
         rdlc.compile_file(input_file)
@@ -29,6 +32,7 @@ def export_rtl(input_file: str, out_dir: str):
         sys.exit(1)
 
     import export_rtl
+
     try:
         export_rtl.run(rdlc, root, out_dir)
     except RDLCompileError:

@@ -1,4 +1,3 @@
-
 from systemrdl import RDLCompiler
 from systemrdl import node
 from systemrdl.rdltypes import OnReadType
@@ -6,17 +5,18 @@ from jinja2 import Environment, FileSystemLoader
 import json
 import opentitan
 
-TEMPLATES_DIR = './src/templates'
-DEFAULT_INTERFACE_NAME = 'regs'
+TEMPLATES_DIR = "./src/templates"
+DEFAULT_INTERFACE_NAME = "regs"
+
 
 def run(rdlc: RDLCompiler, obj: node.RootNode, out_dir: str):
     factory = OtInterfaceBuilder(rdlc)
     data = factory.parse_root(obj.top)
-    with open("/tmp/reg.json", "w", encoding='utf-8') as f:
+    with open("/tmp/reg.json", "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4)
 
     file_loader = FileSystemLoader(TEMPLATES_DIR)
-    env = Environment(loader = file_loader)
+    env = Environment(loader=file_loader)
 
     reg_pkg_tpl = env.get_template("reg_pkg.sv.tpl")
     stream = reg_pkg_tpl.stream(data)
@@ -32,9 +32,9 @@ def run(rdlc: RDLCompiler, obj: node.RootNode, out_dir: str):
 
 
 class OtInterfaceBuilder:
-    last_offset: int = 0 # The last offset of an interface 
-    num_regs: int = 0 # The number of registers of an interface 
-    rdlc: RDLCompiler 
+    last_offset: int = 0  # The last offset of an interface
+    num_regs: int = 0  # The number of registers of an interface
+    rdlc: RDLCompiler
 
     def __init__(self, rdlc: RDLCompiler):
         self.rdlc = rdlc
@@ -44,27 +44,29 @@ class OtInterfaceBuilder:
         Parse a field and return a dictionary.
         """
         obj = dict()
-        obj['name'] = field.inst_name
-        obj['type'] = 'field'
-        obj['parent_name'] = field.parent.inst_name
-        obj['lsb'] = field.lsb
-        obj['msb'] = field.msb
-        obj['width'] = field.msb - field.lsb + 1 
-        if isinstance(field.get_property('reset'), int):
-            obj['reset'] = field.get_property('reset')
-        obj['hw_readable'] = field.is_hw_readable
-        obj['hw_writable'] = field.is_hw_writable
-        obj['sw_readable'] = field.is_sw_readable
-        obj['sw_writable'] = field.is_sw_writable
-        obj['sw_write_en'] = bool(field.get_property('swwe'))
-        obj['write_en_signal'] = self.get_field(field.get_property('swwe')) if obj['sw_write_en'] else None
-        obj['hw_write_en'] = bool(field.get_property('we')) 
-        obj['swmod'] = field.get_property('swmod') 
-        obj['clear_onread'] = field.get_property('onread') == OnReadType.rclr
-        obj['set_onread'] = field.get_property('onread') == OnReadType.rset
-        obj['mubi'] = field.get_property('mubi', default=False)
-        obj['async'] = field.get_property('async', default=None)
-        obj['sync'] = field.get_property('sync', default=None)
+        obj["name"] = field.inst_name
+        obj["type"] = "field"
+        obj["parent_name"] = field.parent.inst_name
+        obj["lsb"] = field.lsb
+        obj["msb"] = field.msb
+        obj["width"] = field.msb - field.lsb + 1
+        if isinstance(field.get_property("reset"), int):
+            obj["reset"] = field.get_property("reset")
+        obj["hw_readable"] = field.is_hw_readable
+        obj["hw_writable"] = field.is_hw_writable
+        obj["sw_readable"] = field.is_sw_readable
+        obj["sw_writable"] = field.is_sw_writable
+        obj["sw_write_en"] = bool(field.get_property("swwe"))
+        obj["write_en_signal"] = (
+            self.get_field(field.get_property("swwe")) if obj["sw_write_en"] else None
+        )
+        obj["hw_write_en"] = bool(field.get_property("we"))
+        obj["swmod"] = field.get_property("swmod")
+        obj["clear_onread"] = field.get_property("onread") == OnReadType.rclr
+        obj["set_onread"] = field.get_property("onread") == OnReadType.rset
+        obj["mubi"] = field.get_property("mubi", default=False)
+        obj["async"] = field.get_property("async", default=None)
+        obj["sync"] = field.get_property("sync", default=None)
         return obj
 
     def get_mem(self, mem: node.FieldNode) -> dict:
@@ -72,15 +74,15 @@ class OtInterfaceBuilder:
         Parse a memory and return a dictionary representing a window.
         """
         obj = dict()
-        obj['name'] = mem.inst_name
-        obj['type'] = 'mem'
-        obj['entries'] = mem.get_property('mementries') 
-        obj['sw_writable'] = mem.is_sw_writable 
-        obj['sw_readable'] = mem.is_sw_readable 
-        obj['width'] = mem.get_property('memwidth')
-        obj['offset'] = mem.address_offset
-        obj['size'] = obj['width'] * obj['entries'] // 8
-        self.last_offset =+ obj['entries'] * obj['width'] // 8
+        obj["name"] = mem.inst_name
+        obj["type"] = "mem"
+        obj["entries"] = mem.get_property("mementries")
+        obj["sw_writable"] = mem.is_sw_writable
+        obj["sw_readable"] = mem.is_sw_readable
+        obj["width"] = mem.get_property("memwidth")
+        obj["offset"] = mem.address_offset
+        obj["size"] = obj["width"] * obj["entries"] // 8
+        self.last_offset = +obj["entries"] * obj["width"] // 8
         return obj
 
     def get_reg(self, reg: node.RegNode) -> dict:
@@ -88,67 +90,70 @@ class OtInterfaceBuilder:
         Parse a register and return a dictionary.
         """
         obj = dict()
-        obj['name'] = reg.inst_name
-        obj['type'] = 'reg'
-        obj['width'] = reg.get_property('regwidth')
-        obj['hw_readable'] = reg.has_hw_readable
-        obj['hw_writable'] = reg.has_hw_writable
-        obj['sw_readable'] = reg.has_sw_readable
-        obj['sw_writable'] = reg.has_sw_writable
-        obj['external'] = reg.external
-        obj['shadowed'] = reg.get_property('shadowed', default=False)
-        
-        obj['offsets'] = []
+        obj["name"] = reg.inst_name
+        obj["type"] = "reg"
+        obj["width"] = reg.get_property("regwidth")
+        obj["hw_readable"] = reg.has_hw_readable
+        obj["hw_writable"] = reg.has_hw_writable
+        obj["sw_readable"] = reg.has_sw_readable
+        obj["sw_writable"] = reg.has_sw_writable
+        obj["external"] = reg.external
+        obj["shadowed"] = reg.get_property("shadowed", default=False)
+
+        obj["offsets"] = []
         if reg.is_array:
             self.num_regs += reg.array_dimensions[0]
             offset = reg.raw_address_offset
             for _idx in range(0, reg.array_dimensions[0]):
-                obj['offsets'].append(offset)
+                obj["offsets"].append(offset)
                 offset += reg.array_stride
         else:
             self.num_regs += 1
-            obj['offsets'].append(reg.address_offset)
+            obj["offsets"].append(reg.address_offset)
 
-        self.last_offset = max(self.last_offset, obj['offsets'][-1])
+        self.last_offset = max(self.last_offset, obj["offsets"][-1])
 
-        obj['fields'] = []
+        obj["fields"] = []
         permit = 0
         sw_write_en = False
         msb = 0
         reset_val = 0
         for field in reg.fields():
             field = self.get_field(field)
-            obj['fields'].append(field)
-            permit |= opentitan.register_permit_mask(field['msb'], field['lsb'])
-            sw_write_en |= field['sw_write_en']
-            msb = max(msb, field['msb'])
-            reset_val |= field.get('reset', 0) << field['lsb'] 
+            obj["fields"].append(field)
+            permit |= opentitan.register_permit_mask(field["msb"], field["lsb"])
+            sw_write_en |= field["sw_write_en"]
+            msb = max(msb, field["msb"])
+            reset_val |= field.get("reset", 0) << field["lsb"]
 
-        obj['permit'] = permit
-        obj['sw_write_en'] = sw_write_en
-        obj['msb'] = msb
-        obj['reset'] = reset_val
-        obj['async'] = False
-        obj['needs_write_en'] = opentitan.needs_write_en(obj) 
-        obj['needs_read_en'] = opentitan.needs_read_en(obj) 
-        obj['needs_qe'] = opentitan.needs_qe(obj) 
-        obj['needs_int_qe'] = opentitan.needs_int_qe(obj) 
+        obj["permit"] = permit
+        obj["sw_write_en"] = sw_write_en
+        obj["msb"] = msb
+        obj["reset"] = reset_val
+        obj["async"] = False
+        obj["needs_write_en"] = opentitan.needs_write_en(obj)
+        obj["needs_read_en"] = opentitan.needs_read_en(obj)
+        obj["needs_qe"] = opentitan.needs_qe(obj)
+        obj["needs_int_qe"] = opentitan.needs_int_qe(obj)
         return obj
 
-    def get_localparams(self, obj: node.AddrmapNode|node.RegfileNode) -> [dict]:
+    def get_localparams(self, obj: node.AddrmapNode | node.RegfileNode) -> [dict]:
         """
         Parse the custom property localparams and return a list of  dictionaries.
         """
         local_params = list(filter(lambda x: x == "localparam", obj.list_properties()))
-        if len(local_params) < 1: 
+        if len(local_params) < 1:
             print(f"WARNING: Localparams not found.")
             return None
         local_params = list(local_params)[0]
         local_params = obj.get_property(local_params)
-        res = [{"name" : param.name,  "type" : param.type_,  "value": param.value} for param in local_params]
+        res = [
+            {"name": param.name, "type": param.type_, "value": param.value}
+            for param in local_params
+        ]
         return res
 
-    def get_interface(self, addrmap: node.AddrmapNode, name: None|str = None) -> dict:
+    def get_interface(self, addrmap: node.AddrmapNode, name: None | str = None) -> dict:
         """
         Parse an interface and return a dictionary.
         """
@@ -159,32 +164,32 @@ class OtInterfaceBuilder:
             print(f"WARNING: Unsupported array type: {type(addrmap)}, skiping...")
 
         interface = dict()
-        interface['name'] = name if name else addrmap.inst_name
+        interface["name"] = name if name else addrmap.inst_name
         if isinstance(addrmap, node.AddrmapNode):
             print(addrmap.inst_name)
-            interface['type'] = 'addrmap'
+            interface["type"] = "addrmap"
         elif isinstance(addrmap, node.RegfileNode):
-            interface['type'] = 'regfile'
+            interface["type"] = "regfile"
         else:
             raise RuntimeError
 
-        interface['offset'] = addrmap.address_offset
+        interface["offset"] = addrmap.address_offset
 
-        interface['regs'] = []
-        interface['windows'] = []
+        interface["regs"] = []
+        interface["windows"] = []
         for child in addrmap.children():
             if isinstance(child, node.RegNode):
                 child_obj = self.get_reg(child)
-                interface['regs'].append(child_obj)
+                interface["regs"].append(child_obj)
             elif isinstance(child, node.MemNode):
                 child_obj = self.get_mem(child)
-                interface['windows'].append(child_obj)
+                interface["windows"].append(child_obj)
             else:
                 print(f"WARNING: Unsupported type: {type(child)}, skiping...")
                 continue
 
-        interface['offset_bits'] = (self.last_offset - 1).bit_length()
-        interface['num_regs'] = self.num_regs
+        interface["offset_bits"] = (self.last_offset - 1).bit_length()
+        interface["num_regs"] = self.num_regs
         return interface
 
     def parse_root(self, root: node.AddrmapNode) -> dict:
@@ -200,26 +205,27 @@ class OtInterfaceBuilder:
 
         obj = dict()
         params = self.get_localparams(root)
-        if (params):
+        if params:
             obj["localparams"] = params
-        obj['ip_name'] = root.inst_name
-        obj['offset'] = root.address_offset
+        obj["ip_name"] = root.inst_name
+        obj["offset"] = root.address_offset
 
-        obj['interfaces'] = []
+        obj["interfaces"] = []
         for child in root.children():
             if isinstance(child, node.AddrmapNode):
                 child_obj = self.get_interface(child)
-                obj['interfaces'].append(child_obj)
+                obj["interfaces"].append(child_obj)
             elif isinstance(child, node.RegNode):
                 continue
             else:
-                print(f"Error: Unsupported type: {type(child)}, top level only supports addrmap and reg components.")
+                print(
+                    f"Error: Unsupported type: {type(child)}, top level only supports addrmap and reg components."
+                )
                 raise RuntimeError
 
         # If the root contain imediate registers, use a default interface name
         if len(root.registers()) > 0:
             interface = self.get_interface(root, name=DEFAULT_INTERFACE_NAME)
-            obj['interfaces'].append(interface)
+            obj["interfaces"].append(interface)
 
         return obj
-
