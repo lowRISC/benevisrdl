@@ -13,10 +13,17 @@ dependencies = [
   "yapf==0.32.0",
   "ruff>=0.9.6",
   "click>=8.2.1",
-  "pytest>=8.4.1",
   "jinja2>=3.1.6",
   "peakrdl>=1.4.0",
 ]
+[project.optional-dependencies]
+linting = [
+  "ruff>=0.9.6",
+]
+test = [
+  "pytest>=8.4.1",
+]
+ci = ["rdl2ot[linting,test]"]
 
 [tool.setuptools]
 # This is actually not a python project, we just use pyproject.toml to manage dependencies.
