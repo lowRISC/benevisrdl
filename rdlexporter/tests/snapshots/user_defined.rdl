@@ -1,0 +1,10 @@
+
+enum MultiBitBool4 {
+  True = 0x6;
+  False = 0x9;
+};
+
+enum MultiBitBool8 {
+  True = 0x96;
+  False = 0x69;
+};

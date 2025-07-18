@@ -2,6 +2,7 @@
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
 
+
 def register_permit_mask(msb: int, lsb: int) -> int:
     """
     One bit presents one byte in the register, so in total 4 bits are used.
