@@ -1,7 +1,7 @@
 [project]
-name = "rdl2ot"
+name = "benevisrdl"
 version = "0.0.0"
-description = "An extension of PeakRDL to generate Opentitan RTL."
+description = "Houses PeakRDL pluggins."
 requires-python = ">=3.10"
 dependencies = [
   # Dependency management
@@ -23,7 +23,7 @@ linting = [
 test = [
   "pytest>=8.4.1",
 ]
-ci = ["rdl2ot[linting,test]"]
+ci = ["benevisrdl[linting,test]"]
 
 [tool.setuptools]
 # This is actually not a python project, we just use pyproject.toml to manage dependencies.
@@ -39,3 +39,6 @@ extend-exclude = [ "*vendor*" ]
 preview = true
 explicit-preview-rules = true
 extend-select = ["E", "E303", "W391"]
+
+[tool.uv.workspace]
+members = ["rdl2ot"]

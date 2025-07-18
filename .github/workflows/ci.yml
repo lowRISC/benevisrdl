@@ -25,5 +25,6 @@ jobs:
       run: |
         uv run ruff check 
 
-    - name: Test 
+    - name: Test rdl2ot 
       run: uv run pytest        
+      working-directory: rdl2ot
