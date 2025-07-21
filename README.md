@@ -1,23 +1,22 @@
 # BenevisRdl
 This repository will house PeakRdl plugins, named after Ben Nevis, the UK's tallest peak.
 
-## rdl2ot
-A PeakRDL extension to generate Opentitan style source files from SystemRDL files.
-
-
-### How to generate the install dependencies
-#### Using uv on macOS and Linux
-
+## Installing dependencies
+### Using uv on macOS and Linux
 ```sh
 curl -LsSf https://astral.sh/uv/install.sh | sh
 uv venv
 uv sync --all-extras 
 . .venv/bin/activate
 ```
-#### Using nix on Any OS
+
+### Using nix on Any OS
 ```sh 
 nix develop
 ```
+
+## rdl2ot cli tool
+A PeakRDL extension to generate Opentitan style source files from SystemRDL files.
 
 ### How to run tests
 ```sh
@@ -39,3 +38,26 @@ A library to generate SystemRDL files from the Hierarchical Register Model.
 cd rdl-exporter
 pytest
 ```
+
+### How to build the package and install it locally
+Install dev dependencies
+```sh
+uv sync --all-extras 
+```
+Build package
+```sh
+cd rdl-exporter
+uv run python -m build
+```
+Install the package locally
+```sh
+uv pip install dist/rdlexporter-0.1.0-py3-none-any.whl
+```
+Testing
+```sh
+uv run python
+```
+```python
+from rdlexporter import RdlExporter
+```
+
