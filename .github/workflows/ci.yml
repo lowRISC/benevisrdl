@@ -19,7 +19,7 @@ jobs:
 
     - name: Install dependencies with uv
       run: |
-        uv sync --extra ci 
+        uv sync --all-extras 
 
     - name: Linting
       run: |
@@ -28,3 +28,7 @@ jobs:
     - name: Test rdl2ot 
       run: uv run pytest        
       working-directory: rdl2ot
+
+    - name: Test rdlexporter 
+      run: uv run pytest        
+      working-directory: rdlexporter

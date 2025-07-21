@@ -30,3 +30,12 @@ pytest
 cd rdl2ot
 python src/rdl2ot export-rtl tests/snapshots/lc_ctrl.rdl /tmp/
 ```
+
+## Rdl-exporter
+A library to generate SystemRDL files from the Hierarchical Register Model.
+
+### How to run tests
+```sh
+cd rdl-exporter
+pytest
+```
