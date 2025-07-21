@@ -3,15 +3,12 @@ name = "benevisrdl"
 version = "0.0.0"
 description = "Houses PeakRDL pluggins."
 requires-python = ">=3.10"
+readme = "README.md"        # Path to your README file
+license = { file = "LICENSE" } # Path to your LICENSE file
 dependencies = [
-  # Dependency management
   "uv==0.6.1",
-  # Linters
-  "flake8 ~= 7.1",
   "isort==5.10.1",
-  "mypy==0.971",
   "yapf==0.32.0",
-  "ruff>=0.9.6",
   "click>=8.2.1",
   "jinja2>=3.1.6",
   "peakrdl>=1.4.0",
@@ -19,14 +16,18 @@ dependencies = [
 [project.optional-dependencies]
 linting = [
   "ruff>=0.9.6",
+  "mypy==0.971",
+  "flake8 ~= 7.1",
 ]
-test = [
+dev = [
   "pytest>=8.4.1",
+  "hatch>=1.4.1",
+  "twine>=6.1.0",
+  "build>=1.2.2",
 ]
-ci = ["benevisrdl[linting,test]"]
+ci = ["benevisrdl[linting,dev]"]
 
 [tool.setuptools]
-# This is actually not a python project, we just use pyproject.toml to manage dependencies.
 py-modules = []
 
 [tool.ruff]

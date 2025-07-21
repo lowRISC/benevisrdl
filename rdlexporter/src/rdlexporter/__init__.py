@@ -7,3 +7,5 @@ from .exporter import RdlExporter
 __all__ = [
     "RdlExporter",
 ]
+
+__version__ = "0.1.0"

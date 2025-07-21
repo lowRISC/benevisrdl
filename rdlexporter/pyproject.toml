@@ -3,7 +3,17 @@ name = "rdlexporter"
 version = "0.1.0"
 description = "Library to export rdl files"
 requires-python = ">=3.10"
+keywords = ["SystemRDL", "library", "exporter"]
 dependencies = []
+
+authors = [
+    { name = "lowRISC contributors"},
+]
+
+[project.urls]
+Homepage = "https://github.com/lowrisc/benevisrdl/rdl-exporter"
+Issues = "https://github.com/lowrisc/benevisrdl/rdl-exporter/issues"
+Documentation = "https://github.com/lowrisc/benevisrdl/rdl-exporter"
 
 [build-system]
 requires = ["hatchling"]
@@ -11,3 +21,13 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/rdlexporter"]
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+    "/.github",
+    "/tests",
+    "/*.pyc",
+    "/.pytest_cache",
+    "/.uv",
+    "/.venv",
+]
