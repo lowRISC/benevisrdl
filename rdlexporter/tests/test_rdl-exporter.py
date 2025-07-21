@@ -10,7 +10,7 @@ from rdlexporter import RdlExporter
 SNAPSHOTS_DIR = Path(__file__).parent / "snapshots"
 
 
-def run_ip_test(tmp_path: Path, ip_block: str):
+def run_ip_test_from_file(tmp_path: Path, ip_block: str):
     input_rdl = SNAPSHOTS_DIR / f"{ip_block}.rdl"
     snapshot_file = input_rdl
     snapshot_content = snapshot_file.read_text(encoding="utf-8")
@@ -35,9 +35,9 @@ def run_ip_test(tmp_path: Path, ip_block: str):
     )
 
 
-def test_cli_uart(tmp_path: Path):
-    run_ip_test(tmp_path, "uart")
+def test_cli_uart_from_file(tmp_path: Path):
+    run_ip_test_from_file(tmp_path, "uart")
 
 
-def test_cli_lc_ctrl(tmp_path: Path):
-    run_ip_test(tmp_path, "lc_ctrl")
+def test_cli_lc_ctrl_from_file(tmp_path: Path):
+    run_ip_test_from_file(tmp_path, "lc_ctrl")
