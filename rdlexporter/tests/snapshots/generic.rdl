@@ -1,0 +1,21 @@
+addrmap generic #(
+    longint Width = 86
+){
+    reg {
+        field {
+            reset = 0x0;
+            swmod = true;
+            desc = "Enable the ip";
+        } EN[0:0];
+        field {
+            reset = 0x7;
+            swmod = false;
+            desc = "Define the mode.";
+            sw = rw;
+            onread = rclr;
+            onwrite = woset;
+            hw = rw;
+        } MODE[9:2];
+    } CTRL[4] @ 0x0;
+
+};
