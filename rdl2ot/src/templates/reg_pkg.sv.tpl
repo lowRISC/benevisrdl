@@ -8,7 +8,7 @@ package {{ ip_name }}_reg_pkg;
 
   // Param list
 
-  {%- for item in localparams %}
+  {%- for item in parameters %}
   parameter {{ item.type|lower }} {{ item.name }} = {{ item.value }};
   {%- endfor %}
 

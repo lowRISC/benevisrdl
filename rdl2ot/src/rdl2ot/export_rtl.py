@@ -141,19 +141,14 @@ class OtInterfaceBuilder:
         obj["needs_int_qe"] = opentitan.needs_int_qe(obj)
         return obj
 
-    def get_localparams(self, obj: node.AddrmapNode | node.RegfileNode) -> [dict]:
+    def get_paramesters(self, obj: node.AddrmapNode | node.RegfileNode) -> [dict]:
         """
         Parse the custom property localparams and return a list of  dictionaries.
         """
-        local_params = list(filter(lambda x: x == "localparam", obj.list_properties()))
-        if len(local_params) < 1:
-            print("WARNING: Localparams not found.")
-            return None
-        local_params = list(local_params)[0]
-        local_params = obj.get_property(local_params)
+
         res = [
-            {"name": param.name, "type": param.type_, "value": param.value}
-            for param in local_params
+            {"name": param.name, "type": "int", "value": param.get_value()}
+            for param in obj.inst.parameters
         ]
         return res
 
@@ -170,7 +165,6 @@ class OtInterfaceBuilder:
         interface = dict()
         interface["name"] = name if name else addrmap.inst_name
         if isinstance(addrmap, node.AddrmapNode):
-            print(addrmap.inst_name)
             interface["type"] = "addrmap"
         elif isinstance(addrmap, node.RegfileNode):
             interface["type"] = "regfile"
@@ -208,9 +202,9 @@ class OtInterfaceBuilder:
             raise RuntimeError
 
         obj = dict()
-        params = self.get_localparams(root)
+        params = self.get_paramesters(root)
         if params:
-            obj["localparams"] = params
+            obj["parameters"] = params
         obj["ip_name"] = root.inst_name
         obj["offset"] = root.address_offset
 
