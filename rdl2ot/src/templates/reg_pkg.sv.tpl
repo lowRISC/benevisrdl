@@ -36,7 +36,7 @@ package {{ ip_name }}_reg_pkg;
     {%- if reg.hw_readable %}
 
   typedef struct packed {
-      {%- for field in reg.fields  %}
+      {%- for field in reg.fields|reverse  %}
         {%- if is_multifield %}
     struct packed {
         {%- endif %}
@@ -65,7 +65,7 @@ package {{ ip_name }}_reg_pkg;
       {%- if reg.hw_writable %}
 
   typedef struct packed {
-        {%- for field in reg.fields  %}
+        {%- for field in reg.fields|reverse  %}
           {%- if is_multifield %}
     struct packed {
           {%- endif %}
