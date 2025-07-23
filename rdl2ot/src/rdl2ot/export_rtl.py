@@ -60,9 +60,10 @@ class OtInterfaceBuilder:
         obj["hw_writable"] = field.is_hw_writable
         obj["sw_readable"] = field.is_sw_readable
         obj["sw_writable"] = field.is_sw_writable
-        obj["sw_write_en"] = bool(field.get_property("swwe"))
+        swwe = field.get_property("swwe")
+        obj["sw_write_en"] = bool(swwe)
         obj["write_en_signal"] = (
-            self.get_field(field.get_property("swwe")) if obj["sw_write_en"] else None
+            self.get_field(swwe) if obj["sw_write_en"] and not isinstance(swwe, bool) else None
         )
         obj["hw_write_en"] = bool(field.get_property("we"))
         obj["swmod"] = field.get_property("swmod")
