@@ -43,6 +43,8 @@ package {{ ip_name }}_reg_pkg;
         {%- if field.hw_readable %}
           {%- set bits = "[{}:0]".format(field.width - 1) if field.width > 1 else " " %}
     {{ indent }}logic {{ "{:<6}".format(bits) }} q;
+        {%- endif %}
+        {%- if field.swmod %}
     {{ indent }}logic        qe;
         {%- endif %}
         {%- if is_multifield %}

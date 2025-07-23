@@ -2,18 +2,19 @@
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
 
+import json
+from pathlib import Path
 from systemrdl import RDLCompiler
 from systemrdl import node
 from systemrdl.rdltypes import OnReadType
 from jinja2 import Environment, FileSystemLoader
-import json
 import opentitan
 
 TEMPLATES_DIR = "./src/templates"
 DEFAULT_INTERFACE_NAME = "regs"
 
 
-def run(rdlc: RDLCompiler, obj: node.RootNode, out_dir: str):
+def run(rdlc: RDLCompiler, obj: node.RootNode, out_dir: Path):
     factory = OtInterfaceBuilder(rdlc)
     data = factory.parse_root(obj.top)
     with open("/tmp/reg.json", "w", encoding="utf-8") as f:
@@ -22,17 +23,23 @@ def run(rdlc: RDLCompiler, obj: node.RootNode, out_dir: str):
     file_loader = FileSystemLoader(TEMPLATES_DIR)
     env = Environment(loader=file_loader)
 
+    ip_name = data["ip_name"]
     reg_pkg_tpl = env.get_template("reg_pkg.sv.tpl")
-    stream = reg_pkg_tpl.stream(data)
-    path = out_dir + "/{}_reg_pkg.sv".format(data["ip_name"])
-    stream.dump(path)
+    # stream = reg_pkg_tpl.stream(data)
+    stream = reg_pkg_tpl.render(data)
+    path = out_dir / f"{ip_name}_reg_pkg.sv"
+    path.open("w").write(stream)
     print(f"Generated {path}.")
 
     reg_top_tpl = env.get_template("reg_top.sv.tpl")
-    stream = reg_top_tpl.stream(data)
-    path = out_dir + "/{}_reg_top.sv".format(data["ip_name"])
-    stream.dump(path)
-    print(f"Generated {path}.")
+    for interface in data["interfaces"]:
+        name = interface["name"]
+        data_ = {"ip_name": ip_name, "interface": interface}
+        # stream = reg_top_tpl.stream(data_)
+        stream = reg_top_tpl.render(data_).replace("; \n", ";\n")
+        path = out_dir / f"{ip_name}_{name}_reg_top.sv"
+        path.open("w").write(stream)
+        print(f"Generated {path}.")
 
 
 class OtInterfaceBuilder:
