@@ -8,13 +8,14 @@ package {{ ip_name }}_reg_pkg;
 
   // Param list
 
-  {%- for item in parameters %}
+{%- for item in parameters %}
   parameter {{ item.type|lower }} {{ item.name }} = {{ item.value }};
-  {%- endfor %}
+{%- endfor %}
 
   // Address widths within the block
 {%- for interface in interfaces %}
-  parameter int {{ interface.name|title }}Aw = {{ interface.offset_bits }};
+  {%- set addr_with_name = (interface.name|title if interface.name else "Block") + "Aw"  %}
+  parameter int {{ addr_with_name }} = {{ interface.offset_bits }};
 {%- endfor %}
 
   // Number of registers for every interface
@@ -22,22 +23,21 @@ package {{ ip_name }}_reg_pkg;
   parameter int NumRegs{{ interface.name|title }} = {{ interface.num_regs }};
 {%- endfor %}
 
-{%- for interface in interfaces -%}
-  {%- set registers = interface.regs -%}
+{%- for interface in interfaces %}
+  {%- set registers = interface.regs %}
+  {%- set interface_name = ("_" + interface.name) if interface.name %}
   {%- if registers|length > 0 %}
 
   ///////////////////////////////////////////////
   // Typedefs for registers for {{ interface.name }} interface //
   ///////////////////////////////////////////////
   {%- for reg in registers -%}
-    {%- set is_multireg = (reg.offsets|length > 1) -%}
-    {%- set is_multifield = reg.fields|length > 1 -%}
-    {%- set indent = "  " if is_multifield -%}
+    {%- set indent = "  " if reg.is_multifields %}
     {%- if reg.hw_readable %}
 
   typedef struct packed {
       {%- for field in reg.fields|reverse  %}
-        {%- if is_multifield %}
+        {%- if reg.is_multifields and field.hw_readable %}
     struct packed {
         {%- endif %}
         {%- if field.hw_readable %}
@@ -47,79 +47,85 @@ package {{ ip_name }}_reg_pkg;
         {%- if field.swmod %}
     {{ indent }}logic        qe;
         {%- endif %}
-        {%- if is_multifield %}
+        {%- if reg.hwre or (reg.shadowed and reg.external) %}
+    {{ indent }}logic        re;
+        {%- endif %}
+        {%- if reg.is_multifields and field.hw_readable %}
     } {{ field.name|lower }};
         {%- endif %}
       {%- endfor %}
-  } {{ ip_name }}_reg2hw_{{ reg.name|lower }}_{{"m" if is_multireg}}reg_t;
+  } {{ ip_name }}_reg2hw_{{ reg.name|lower }}_{{"m" if reg.is_multireg}}reg_t;
     {%- endif %}
   {%- endfor %}
 {%- endif %}
 {%- endfor -%}
 
 {% for interface in interfaces -%}
+  {%- set addr_with_name = (interface.name|title if interface.name else "Block") + "Aw"  %}
   {%- set registers = interface.regs %}
   {%- if registers|length > 0 %}
     {%- for reg in registers  %}
-      {%- set is_multireg = (reg.offsets|length > 1) %}
-      {%- set is_multifield = reg.fields|length > 1 %}
-      {%- set indent = "  " if is_multifield %}
+      {%- set indent = "  " if reg.is_multifields %}
       {%- if reg.hw_writable %}
 
   typedef struct packed {
         {%- for field in reg.fields|reverse  %}
-          {%- if is_multifield %}
+          {%- if reg.is_multifields %}
     struct packed {
           {%- endif %}
           {%- if field.hw_writable %}
             {%- set bits = "[{}:0]".format(field.width - 1) if field.width > 1 else " " %}
     {{ indent }}logic {{ "{:<6}".format(bits) }} d;
+            {%- if not reg.external %}
+    {{ indent }}logic {{ "{:<6}".format("") }} de;
+            {%- endif %}
           {%- endif %}
-          {%- if is_multifield %}
+          {%- if reg.is_multifields %}
     } {{ field.name|lower }};
           {%- endif %}
         {%- endfor %}
-  } {{ ip_name }}_hw2reg_{{ reg.name|lower }}_{{"m" if is_multireg}}reg_t;
+  } {{ ip_name }}_hw2reg_{{ reg.name|lower }}_{{"m" if reg.is_multireg}}reg_t;
       {%- endif %}
     {%- endfor %}
   {%- endif %}
 {%- endfor %}
 
 {%- for interface in interfaces %}
+  {%- set interface_name = ("_" + interface.name) if interface.name -%}
   {%- set registers = interface.regs %}
   {%- if registers|length > 0 %}
 
   // Register -> HW type for {{ interface.name }} interface
   typedef struct packed {
     {%- for reg in registers  %}
-      {%- set is_multireg = (reg.offsets|length > 1) %}
       {%- if reg.hw_readable %}
         {%- set bits = " [{}:0]".format(reg.offsets|length -1) if reg.offsets|length > 1 %}
-    {{ ip_name }}_reg2hw_{{ reg.name|lower }}_{{"m" if is_multireg}}reg_t{{ bits }} {{ reg.name|lower }};
+    {{ ip_name }}_reg2hw_{{ reg.name|lower }}_{{"m" if reg.is_multireg}}reg_t{{ bits }} {{ reg.name|lower }};
       {%- endif %}
     {%- endfor %}
-  } {{ ip_name }}_regs_reg2hw_t;
+  } {{ ip_name }}{{interface_name}}_reg2hw_t;
   {%- endif %}
 {%- endfor %}
 
 {%- for interface in interfaces -%}
+  {%- set interface_name = ("_" + interface.name) if interface.name -%}
   {%- set registers = interface.regs %}
   {%- if registers|length > 0 %}
 
   // HW -> register type for {{ interface.name }} interface
   typedef struct packed {
     {%- for reg in registers  %}
-      {%- set is_multireg = (reg.offsets|length > 1) %}
       {%- if reg.hw_writable %}
         {%- set bits = " [{}:0]".format(reg.offsets|length -1) if reg.offsets|length > 1 %}
-    {{ ip_name }}_hw2reg_{{ reg.name|lower }}_{{"m" if is_multireg}}reg_t{{ bits }} {{ reg.name|lower }};
+    {{ ip_name }}_hw2reg_{{ reg.name|lower }}_{{"m" if reg.is_multireg}}reg_t{{ bits }} {{ reg.name|lower }};
       {%- endif %}
     {%- endfor %}
-  } {{ ip_name }}_regs_hw2reg_t;
+  } {{ ip_name }}{{interface_name}}_hw2reg_t;
   {%- endif %}
 {%- endfor %}
 
 {%- for interface in interfaces -%}
+  {%- set addr_with_name = (interface.name|title if interface.name else "Block") + "Aw"  %}
   {%- set registers = interface.regs %}
   {%- if registers|length > 0 %}
 
@@ -131,7 +137,7 @@ package {{ ip_name }}_reg_pkg;
         {%- for offset in reg.offsets %}
           {%- set index = "_{}".format(loop.index0) if reg.offsets|length > 1 %}
         {%- set offset_name = "{}_{}{}_OFFSET".format(ip_name, reg.name, index)|upper %}
-  parameter logic [{{ interface.name|title }}Aw-1:0] {{ "{} = {}'h {:x}".format(offset_name, offset_bits, offset) }};
+  parameter logic [{{ addr_with_name }}-1:0] {{ "{} = {}'h {:x}".format(offset_name, offset_bits, offset) }};
         {%- endfor %}
       {%- endfor %}
     {%- endfor %}
@@ -146,12 +152,12 @@ package {{ ip_name }}_reg_pkg;
     {%- for reg in registers %}
       {%- if reg.external %}
         {%- for offset in reg.offsets %}
-          {%- set index = "_{}".format(loop.index0) if reg.offsets|length > 1 %}
+          {%- set index = "_{}".format(loop.index0) if reg.is_multireg %}
           {%- set regname = (reg.name ~ index)|upper %}
   parameter logic {{ "[{}:0] {}_{}_RESVAL = {}'h {:x}".format(reg.msb, ip_name|upper, regname, reg.msb + 1, reg.reset) }};
           {%- for field in reg.fields  %}
             {%- if 'reset' in field %}
-  parameter logic {{ "[{}:{}] {}_{}_{}_RESVAL = {}'h {:x}".format(field.msb, field.lsb, ip_name|upper, regname, field.name|upper, field.width, field.reset) }};
+  parameter logic {{ "[{}:0] {}_{}_{}{}_RESVAL = {}'h {:x}".format(field.width - 1, ip_name|upper, regname, field.name|upper, index, field.width, field.reset) }};
             {%- endif -%}
           {%- endfor %}
         {%- endfor %}
@@ -161,6 +167,7 @@ package {{ ip_name }}_reg_pkg;
 {%- endfor %}
 
 {%- for interface in interfaces %}
+  {%- set interface_name = ("_" + interface.name) if interface.name -%}
   {%- set registers = interface.regs %}
   {%- if registers|length > 0 %}
 
@@ -174,17 +181,18 @@ package {{ ip_name }}_reg_pkg;
     {{ "{}_{}{}".format(ip_name, regname, "," if not (loop.last and out_loop.last) )|upper }}
       {%- endfor %}
     {%- endfor %}
-  } {{ ip_name }}_regs_id_e;
+  } {{ ip_name }}{{interface_name}}_id_e;
   {%- endif %}
 {%- endfor %}
 
 {%- for interface in interfaces %}
+  {%- set interface_name = ("_" + interface.name) if interface.name -%}
   {%- set ns = namespace(index=0) %}
   {%- set registers = interface.regs %}
   {%- if registers|length > 0 %}
 
   // Register width information to check illegal writes for {{ interface.name }} interface
-  parameter logic [3:0] {{ ip_name|upper }}_REGS_PERMIT [{{ interface.num_regs }}] = '{
+  parameter logic [3:0] {{ (ip_name ~ interface_name)|upper }}_PERMIT [{{ interface.num_regs }}] = '{
     {%- for reg in registers %}
       {%- set out_loop = loop%}
       {%- for offset in reg.offsets %}
@@ -199,12 +207,13 @@ package {{ ip_name }}_reg_pkg;
 {%- endfor %}
 
 {%- for interface in interfaces %}
+  {%- set addr_with_name = (interface.name|title if interface.name else "Block") + "Aw"  %}
   {%- set windows = interface.windows %}
   {%- if windows|length > 0 %}
 
   // Window parameters for {{ interface.name }} interface
     {%- for win in windows  %}
-  parameter logic [{{ interface.name|title }}Aw-1:0] {{ ip_name|upper }}_{{ win.name|upper }}_OFFSET = {{ interface.offset_bits}}'h {{ win.offset }};
+  parameter logic [{{ addr_with_name }}-1:0] {{ ip_name|upper }}_{{ win.name|upper }}_OFFSET = {{ interface.offset_bits}}'h {{ win.offset }};
   parameter int unsigned      {{ ip_name|upper }}_{{ win.name|upper }}_SIZE   = 'h {{ "{:x}".format(win.size) }};
   parameter int unsigned      {{ ip_name|upper }}_{{ win.name|upper }}_IDX    = {{ loop.index0 }};
     {%- endfor %}

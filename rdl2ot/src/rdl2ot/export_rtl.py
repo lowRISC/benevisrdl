@@ -18,7 +18,7 @@ def run(rdlc: RDLCompiler, obj: node.RootNode, out_dir: Path):
     factory = OtInterfaceBuilder(rdlc)
     data = factory.parse_root(obj.top)
     with open("/tmp/reg.json", "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=4)
+        json.dump(data, f, indent=2)
 
     file_loader = FileSystemLoader(TEMPLATES_DIR)
     env = Environment(loader=file_loader)
@@ -33,11 +33,11 @@ def run(rdlc: RDLCompiler, obj: node.RootNode, out_dir: Path):
 
     reg_top_tpl = env.get_template("reg_top.sv.tpl")
     for interface in data["interfaces"]:
-        name = interface["name"]
+        name = "_{}".format(interface["name"]) if "name" in interface else ""
         data_ = {"ip_name": ip_name, "interface": interface}
         # stream = reg_top_tpl.stream(data_)
-        stream = reg_top_tpl.render(data_).replace("; \n", ";\n")
-        path = out_dir / f"{ip_name}_{name}_reg_top.sv"
+        stream = reg_top_tpl.render(data_).replace(" \n", "\n")
+        path = out_dir / f"{ip_name}{name}_reg_top.sv"
         path.open("w").write(stream)
         print(f"Generated {path}.")
 
@@ -45,6 +45,10 @@ def run(rdlc: RDLCompiler, obj: node.RootNode, out_dir: Path):
 class OtInterfaceBuilder:
     last_offset: int = 0  # The last offset of an interface
     num_regs: int = 0  # The number of registers of an interface
+    any_async_clk: bool = False  # Whether is there any register with async clock in the interface
+    all_async_clk: bool = True  # Whether all registers have async clock in the interface
+    async_registers: list = [(int, str)]  # List of all the (index, register) with async clock
+    reg_index: int = 0
     rdlc: RDLCompiler
 
     def __init__(self, rdlc: RDLCompiler):
@@ -61,6 +65,7 @@ class OtInterfaceBuilder:
         obj["lsb"] = field.lsb
         obj["msb"] = field.msb
         obj["width"] = field.msb - field.lsb + 1
+        obj["bitmask"] = (1 << (field.msb + 1)) - (1 << field.lsb)
         if isinstance(field.get_property("reset"), int):
             obj["reset"] = field.get_property("reset")
         obj["hw_readable"] = field.is_hw_readable
@@ -79,6 +84,7 @@ class OtInterfaceBuilder:
         obj["mubi"] = field.get_property("mubi", default=False)
         obj["async"] = field.get_property("async", default=None)
         obj["sync"] = field.get_property("sync", default=None)
+        obj["reggen_sw_access"] = opentitan.get_sw_access_enum(field)
         return obj
 
     def get_mem(self, mem: node.FieldNode) -> dict:
@@ -87,7 +93,6 @@ class OtInterfaceBuilder:
         """
         obj = dict()
         obj["name"] = mem.inst_name
-        obj["type"] = "mem"
         obj["entries"] = mem.get_property("mementries")
         obj["sw_writable"] = mem.is_sw_writable
         obj["sw_readable"] = mem.is_sw_readable
@@ -109,11 +114,15 @@ class OtInterfaceBuilder:
         obj["hw_writable"] = reg.has_hw_writable
         obj["sw_readable"] = reg.has_sw_readable
         obj["sw_writable"] = reg.has_sw_writable
+        obj["swmod"] = reg.get_property("swmod", default=None)
+        obj["async_clk"] = reg.get_property("async_clk", default=None)
         obj["external"] = reg.external
         obj["shadowed"] = reg.get_property("shadowed", default=False)
+        obj["hwre"] = reg.get_property("hwre", default=False)
 
         obj["offsets"] = []
         if reg.is_array:
+            obj["is_multireg"] = True
             self.num_regs += reg.array_dimensions[0]
             offset = reg.raw_address_offset
             for _idx in range(0, reg.array_dimensions[0]):
@@ -130,23 +139,37 @@ class OtInterfaceBuilder:
         sw_write_en = False
         msb = 0
         reset_val = 0
+        bitmask = 0
         for field in reg.fields():
             field = self.get_field(field)
             obj["fields"].append(field)
             permit |= opentitan.register_permit_mask(field["msb"], field["lsb"])
             sw_write_en |= field["sw_write_en"]
             msb = max(msb, field["msb"])
+            bitmask |= field["bitmask"]
             reset_val |= field.get("reset", 0) << field["lsb"]
 
         obj["permit"] = permit
         obj["sw_write_en"] = sw_write_en
         obj["msb"] = msb
+        obj["bitmask"] = bitmask
         obj["reset"] = reset_val
         obj["async"] = False
         obj["needs_write_en"] = opentitan.needs_write_en(obj)
         obj["needs_read_en"] = opentitan.needs_read_en(obj)
         obj["needs_qe"] = opentitan.needs_qe(obj)
         obj["needs_int_qe"] = opentitan.needs_int_qe(obj)
+        obj["is_multifields"] = len(obj["fields"]) > 1
+        self.any_async_clk |= bool(obj["async_clk"])
+        self.all_async_clk &= bool(obj["async_clk"])
+
+        if bool(obj["async_clk"]):
+            array_size = len(obj["offsets"])
+            for index in range(0, array_size):
+                reg_name = reg.inst_name + (f"_{index}" if array_size > 1 else "")
+                self.async_registers.append((self.reg_index + index, reg_name))
+            self.reg_index += array_size - 1
+        self.reg_index += 1
         return obj
 
     def get_paramesters(self, obj: node.AddrmapNode | node.RegfileNode) -> [dict]:
@@ -160,27 +183,24 @@ class OtInterfaceBuilder:
         ]
         return res
 
-    def get_interface(self, addrmap: node.AddrmapNode, name: None | str = None) -> dict:
+    def get_interface(self, addrmap: node.AddrmapNode, defalt_name: None | str = None) -> dict:
         """
         Parse an interface and return a dictionary.
         """
         self.last_offset = 0
         self.num_regs = 0
+        self.any_async_clk = False
+        self.all_async_clk = True
+        self.async_registers.clear()
 
         if addrmap.is_array:
             print(f"WARNING: Unsupported array type: {type(addrmap)}, skiping...")
 
         interface = dict()
-        interface["name"] = name if name else addrmap.inst_name
-        if isinstance(addrmap, node.AddrmapNode):
-            interface["type"] = "addrmap"
-        elif isinstance(addrmap, node.RegfileNode):
-            interface["type"] = "regfile"
-        else:
-            raise RuntimeError
+        if defalt_name:
+            interface["name"] = addrmap.inst_name or defalt_name
 
         interface["offset"] = addrmap.address_offset
-
         interface["regs"] = []
         interface["windows"] = []
         for child in addrmap.children():
@@ -196,6 +216,7 @@ class OtInterfaceBuilder:
 
         interface["offset_bits"] = (self.last_offset - 1).bit_length()
         interface["num_regs"] = self.num_regs
+        interface["async_registers"] = self.async_registers
         return interface
 
     def parse_root(self, root: node.AddrmapNode) -> dict:
@@ -219,7 +240,7 @@ class OtInterfaceBuilder:
         obj["interfaces"] = []
         for child in root.children():
             if isinstance(child, node.AddrmapNode):
-                child_obj = self.get_interface(child)
+                child_obj = self.get_interface(child, DEFAULT_INTERFACE_NAME)
                 obj["interfaces"].append(child_obj)
             elif isinstance(child, node.RegNode):
                 continue
@@ -232,7 +253,10 @@ class OtInterfaceBuilder:
 
         # If the root contain imediate registers, use a default interface name
         if len(root.registers()) > 0:
-            interface = self.get_interface(root, name=DEFAULT_INTERFACE_NAME)
+            interface = self.get_interface(root)
             obj["interfaces"].append(interface)
 
+        for interface in obj["interfaces"]:
+            interface["any_async_clk"] = self.any_async_clk
+            interface["all_async_clk"] = self.all_async_clk
         return obj
