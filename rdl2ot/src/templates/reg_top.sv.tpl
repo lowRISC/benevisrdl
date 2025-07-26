@@ -19,6 +19,9 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
   input clk_{{ clk_name }}i,
   input rst_{{ clk_name }}ni,
 {%- endif %}
+{%- if interface.any_shadowed_reg %}
+  input rst_shadowed_ni,
+{%- endif %}
   input  tlul_pkg::tl_h2d_t tl_i,
   output tlul_pkg::tl_d2h_t tl_o,
 
@@ -33,7 +36,14 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
   // To HW
   output {{ ip_name|lower }}_reg_pkg::{{ ip_name|lower }}{{interface_name}}_reg2hw_t reg2hw, // Write
   input  {{ ip_name|lower }}_reg_pkg::{{ ip_name|lower }}{{interface_name}}_hw2reg_t hw2reg, // Read
-  {%- endif %}
+{%- endif %}
+
+{%- if interface.any_shadowed_reg %}
+
+  output logic shadowed_storage_err_o,
+  output logic shadowed_update_err_o,
+
+{%- endif %}
 
   // Integrity check errors
   output logic intg_err_o
@@ -200,6 +210,10 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
       {%- if not reg.async_clk and field.sw_writable %} 
   logic {{ width ~ reg.name|lower ~ index ~ field_name }}_wd;
       {%- endif %}
+      {%- if reg.shadowed and not reg.external %}
+  logic {{ reg.name|lower ~ index ~ field_name }}_storage_err;
+  logic {{ reg.name|lower ~ index ~ field_name }}_update_err;
+      {%- endif %}
     {%- endfor %}
     {%- if reg.async_clk %} 
   logic [{{ reg.msb }}:0] {{reg.name ~ index }}_qs;
@@ -338,8 +352,20 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
     {%- if reg.needs_int_qe %}
   logic {{ '[{}:0] {}'.format(reg.fields|length - 1, regname) }}_flds_we;
     {%- endif %}
-    {%- if reg.needs_qe and reg.external %}
+    {%- if reg.needs_qe  %}
+      {%- if reg.external %}
   assign {{clk_prefix ~ regname }}_qe = &{{"{}".format(regname) }}_flds_we;
+      {%- else %}
+  prim_flop #(
+    .Width(1),
+    .ResetValue(0)
+  ) u_{{ reg.name|lower ~ multireg_idx }}_qe (
+    .clk_i(clk_i),
+    .rst_ni(rst_ni),
+    .d_i(&{{ regname }}_flds_we),
+    .q_o({{ regname }}_qe)
+  );
+      {%- endif %}
     {%- endif %}
     {%- if reg.async_clk and reg.hw_writable %}
   assign {{clk_prefix ~ regname }}_qe = |{{"{}".format(regname) }}_flds_we;
@@ -366,7 +392,7 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
       {%- if reg.is_multifields %}
   //   F{{ '[{}{}]: {}:{}'.format(field.name, multireg_suffix, field.msb, field.lsb)|lower }}
       {%- endif %}
-  prim_subreg{{ '_ext' if reg.external }} #(
+  prim_subreg{{ '_ext' if reg.external else ('_shadow' if reg.shadowed) }} #(
     .DW      ({{ field.width }})
       {%- if not reg.external -%}
     ,
@@ -383,34 +409,25 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
       {%- endif %}
       {%- endif %}
 {{- space }}
-
     {%- set sig_name = (reg.name ~ ("[{}]".format(multireg_idx) if reg.is_multireg) ~ property)|lower -%}
     {%- set suffix = "_int" if reg.async_clk %}
-
-    // from register interface
       {%- if reg.external or reg.shadowed %}
     .re     ({{ "{}{}{}_re".format(clk_prefix, reg.name, multireg_suffix)|lower if reg.sw_readable or reg.shadowed else "1'b0" }}),
       {%- endif %}
     .we     ({{ "{}{}_we".format(clk_prefix ~ regname, ("_gated" if reg.sw_write_en)) if reg.sw_writable else "1'b0"  }}),
     .wd     ({{ "{}{}{}_wd{}{}".format(clk_prefix, regname, field_name if not reg.async_clk, "ata" if reg.async_clk, bit_index if reg.async_clk) if reg.sw_writable else "'0"  }}),
-
-    // from internal hardware
       {%- if not reg.external %}
     .de     ({% if reg.hw_writable %}hw2reg.{{ sig_name }}.de{% else %}1'b0{% endif %}),
       {%- endif %}
     .d      ({% if reg.hw_writable %}hw2reg.{{ sig_name }}.d{% else %}'0{% endif %}),
-
-    // to internal hardware
       {%- if reg.external %}
-    .qre    ({% if reg.hwre %}{{ regname }}.re{% endif %}),
+    .qre    ({{  "reg2hw.{}.re".format(sig_name) if reg.hwre or reg.shadowed }}),
       {%- endif %}
     .qe     ({{ "{}_flds_we[{}]".format(regname, loop.index0) if reg.needs_int_qe  }}),
-    .q      ({{ "reg2hw.{}.q".format(sig_name) if reg.hw_readable }}),
+    .q      ({{ "reg2hw.{}.q".format(sig_name) if field.hw_readable }}),
     .ds     ({{ "{}{}{}_ds{}".format(clk_prefix, regname, field_name, suffix) if reg.async_clk and reg.hw_writable }}),
-
-    // to register interface (read)
     .qs     ({{ "{}{}_qs{}".format(clk_prefix, regname ~ field_name, suffix) if reg.sw_readable }})
-      {%- if reg.shadowed -%}
+      {%- if not reg.external and reg.shadowed -%}
       ,
 
     // Shadow register phase. Relevant for hwext only.
@@ -426,7 +443,7 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
         {%- endif %}
       {%- endif %}
   );
-    {%- if reg.external and reg.sw_writable %}
+    {%- if field.hw_readable and field.swmod %}
   assign reg2hw.{{ sig_name }}.qe = {{ regname }}_qe;
     {%- endif %}
 {{- space }}
@@ -538,13 +555,62 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
 
   // shadow busy
   logic shadow_busy;
+  {%- if interface.any_shadowed_reg %}
+  logic rst_done;
+  logic shadow_rst_done;
+  always_ff @(posedge clk_i or negedge rst_ni) begin
+    if (!rst_ni) begin
+      rst_done <= '0;
+    end else begin
+      rst_done <= 1'b1;
+    end
+  end
+
+  always_ff @(posedge clk_i or negedge rst_shadowed_ni) begin
+    if (!rst_shadowed_ni) begin
+      shadow_rst_done <= '0;
+    end else begin
+      shadow_rst_done <= 1'b1;
+    end
+  end
+
+  // both shadow and normal resets have been released
+  assign shadow_busy = ~(rst_done & shadow_rst_done);
+  {%- else %}
   assign shadow_busy = 1'b0;
+  {%- endif %}
+
+  {%- if interface.any_shadowed_reg %}
+
+  // Collect up storage and update errors
+  assign shadowed_storage_err_o = |{
+    {%- for reg in registers  %}
+      {%- if reg.shadowed and not reg.external %}
+        {%- for field in reg.fields  %}
+    {{ "{}_{}_storage_err".format(reg.name, field.name)|lower }}
+    {{- "," if not loop.last }}
+        {%- endfor %}
+      {%- endif %}
+    {%- endfor %}
+  };
+  assign shadowed_update_err_o = |{
+    {%- for reg in registers  %}
+      {%- if reg.shadowed and not reg.external %}
+        {%- for field in reg.fields  %}
+    {{ "{}_{}_update_err".format(reg.name, field.name)|lower }}
+    {{- "," if not loop.last }}
+        {%- endfor %}
+      {%- endif %}
+    {%- endfor %}
+  };
+
+  {%- endif %}
 
   // register busy
 
-  {%- if interface.all_async_clk %}
+  {%- if not interface.any_async_clk %}
   assign reg_busy = shadow_busy;
-  {% else %}
+  {%- else %}
   logic reg_busy_sel;
   assign reg_busy = (reg_busy_sel | shadow_busy) & tl_i.a_valid;
   always_comb begin
@@ -561,7 +627,6 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
     endcase
   end
   {%- endif %}
-
 
   // Unused signal tieoff
 
@@ -586,3 +651,4 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
 {%- endif %}
 
 endmodule
+

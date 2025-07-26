@@ -48,6 +48,7 @@ class OtInterfaceBuilder:
     any_async_clk: bool = False  # Whether is there any register with async clock in the interface
     all_async_clk: bool = True  # Whether all registers have async clock in the interface
     async_registers: list = [(int, str)]  # List of all the (index, register) with async clock
+    any_shadowed_reg: bool = False
     reg_index: int = 0
     rdlc: RDLCompiler
 
@@ -162,6 +163,7 @@ class OtInterfaceBuilder:
         obj["is_multifields"] = len(obj["fields"]) > 1
         self.any_async_clk |= bool(obj["async_clk"])
         self.all_async_clk &= bool(obj["async_clk"])
+        self.any_shadowed_reg |= bool(obj["shadowed"])
 
         if bool(obj["async_clk"]):
             array_size = len(obj["offsets"])
@@ -191,6 +193,7 @@ class OtInterfaceBuilder:
         self.num_regs = 0
         self.any_async_clk = False
         self.all_async_clk = True
+        self.any_shadowed_reg = False
         self.async_registers.clear()
 
         if addrmap.is_array:
@@ -259,4 +262,5 @@ class OtInterfaceBuilder:
         for interface in obj["interfaces"]:
             interface["any_async_clk"] = self.any_async_clk
             interface["all_async_clk"] = self.all_async_clk
+            interface["any_shadowed_reg"] = self.any_shadowed_reg
         return obj
