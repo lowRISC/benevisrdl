@@ -136,7 +136,6 @@ class OtInterfaceBuilder:
         self.last_offset = max(self.last_offset, obj["offsets"][-1])
 
         obj["fields"] = []
-        permit = 0
         sw_write_en = False
         msb = 0
         reset_val = 0
@@ -144,15 +143,14 @@ class OtInterfaceBuilder:
         for field in reg.fields():
             field = self.get_field(field)
             obj["fields"].append(field)
-            permit |= opentitan.register_permit_mask(field["msb"], field["lsb"])
             sw_write_en |= field["sw_write_en"]
             msb = max(msb, field["msb"])
             bitmask |= field["bitmask"]
             reset_val |= field.get("reset", 0) << field["lsb"]
 
-        obj["permit"] = permit
-        obj["sw_write_en"] = sw_write_en
         obj["msb"] = msb
+        obj["permit"] = opentitan.register_permit_mask(obj)
+        obj["sw_write_en"] = sw_write_en
         obj["bitmask"] = bitmask
         obj["reset"] = reset_val
         obj["async"] = False

@@ -6,18 +6,18 @@ from systemrdl.rdltypes import OnReadType, OnWriteType, AccessType
 from systemrdl import node
 
 
-def register_permit_mask(msb: int, lsb: int) -> int:
+def register_permit_mask(reg: dict) -> int:
     """
     One bit presents one byte in the register, so in total 4 bits are used.
-    This function check which byte the register field is in and return the mask.
-    The caller should loop the register fields and OR the values returned by this
-    function the get the final permit representation for a register.
     """
-    mask = 0
-    for bit in range(lsb, msb + 1):
-        byte_index = bit // 8
-        mask |= 1 << byte_index
-    return mask
+    w = reg["msb"] + 1
+    if w > 24:
+        return 0b1111
+    if w > 16:
+        return 0b0111
+    if w > 8:
+        return 0b0011
+    return 0b0001
 
 
 def needs_read_en(reg: dict()) -> bool:

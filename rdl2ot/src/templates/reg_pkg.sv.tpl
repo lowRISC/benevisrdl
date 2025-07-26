@@ -70,18 +70,18 @@ package {{ ip_name }}_reg_pkg;
 
   typedef struct packed {
         {%- for field in reg.fields|reverse  %}
-          {%- if reg.is_multifields %}
-    struct packed {
-          {%- endif %}
           {%- if field.hw_writable %}
+            {%- if reg.is_multifields %}
+    struct packed {
+            {%- endif %}
             {%- set bits = "[{}:0]".format(field.width - 1) if field.width > 1 else " " %}
     {{ indent }}logic {{ "{:<6}".format(bits) }} d;
             {%- if not reg.external %}
     {{ indent }}logic {{ "{:<6}".format("") }} de;
             {%- endif %}
-          {%- endif %}
-          {%- if reg.is_multifields %}
+            {%- if reg.is_multifields %}
     } {{ field.name|lower }};
+            {%- endif %}
           {%- endif %}
         {%- endfor %}
   } {{ ip_name }}_hw2reg_{{ reg.name|lower }}_{{"m" if reg.is_multireg}}reg_t;
