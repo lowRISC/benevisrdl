@@ -43,7 +43,6 @@ def run(rdlc: RDLCompiler, obj: node.RootNode, out_dir: Path):
 
 
 class OtInterfaceBuilder:
-    last_offset: int = 0  # The last offset of an interface
     num_regs: int = 0  # The number of registers of an interface
     any_async_clk: bool = False  # Whether is there any register with async clock in the interface
     all_async_clk: bool = True  # Whether all registers have async clock in the interface
@@ -100,7 +99,6 @@ class OtInterfaceBuilder:
         obj["width"] = mem.get_property("memwidth")
         obj["offset"] = mem.address_offset
         obj["size"] = obj["width"] * obj["entries"] // 8
-        self.last_offset = +obj["entries"] * obj["width"] // 8
         return obj
 
     def get_reg(self, reg: node.RegNode) -> dict:
@@ -133,8 +131,6 @@ class OtInterfaceBuilder:
             self.num_regs += 1
             obj["offsets"].append(reg.address_offset)
 
-        self.last_offset = max(self.last_offset, obj["offsets"][-1])
-
         obj["fields"] = []
         sw_write_en = False
         msb = 0
@@ -158,7 +154,9 @@ class OtInterfaceBuilder:
         obj["needs_read_en"] = opentitan.needs_read_en(obj)
         obj["needs_qe"] = opentitan.needs_qe(obj)
         obj["needs_int_qe"] = opentitan.needs_int_qe(obj)
+        obj["fields_no_write_en"] = opentitan.fields_no_write_en(obj)
         obj["is_multifields"] = len(obj["fields"]) > 1
+
         self.any_async_clk |= bool(obj["async_clk"])
         self.all_async_clk &= bool(obj["async_clk"])
         self.any_shadowed_reg |= bool(obj["shadowed"])
@@ -187,7 +185,6 @@ class OtInterfaceBuilder:
         """
         Parse an interface and return a dictionary.
         """
-        self.last_offset = 0
         self.num_regs = 0
         self.any_async_clk = False
         self.all_async_clk = True
@@ -215,7 +212,12 @@ class OtInterfaceBuilder:
                 print(f"WARNING: Unsupported type: {type(child)}, skiping...")
                 continue
 
-        interface["offset_bits"] = (self.last_offset - 1).bit_length()
+        last_addr =  interface["regs"][-1]["offsets"][-1] + 4 if len(interface["regs"]) > 0 else 0
+        if len(interface["windows"]) > 0:
+            last_addr = max(
+                last_addr, interface["windows"][-1]["offset"] + interface["windows"][-1]["size"]
+            )
+        interface["addr_width"] = (last_addr - 1).bit_length()
         interface["num_regs"] = self.num_regs
         interface["async_registers"] = self.async_registers
         return interface

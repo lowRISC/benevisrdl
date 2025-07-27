@@ -95,3 +95,19 @@ def get_sw_access_enum(field: node.FieldNode) -> str:
         return "RW"
 
     return "NONE"
+
+
+def fields_no_write_en(reg: dict()) -> int:
+    res = 0
+    for idx, field in enumerate(reg["fields"]):
+        res |= (not needs_we(field)) << idx
+    return res
+
+
+def needs_we(field: dict) -> bool:
+    """Should the register for this field have a write-enable signal?
+    This is almost the same as allows_write(), but doesn't return true for
+    RC registers, which should use a read-enable signal (connected to their
+    prim_subreg's we port).
+    """
+    return field["reggen_sw_access"] != "RC" and field["sw_writable"]

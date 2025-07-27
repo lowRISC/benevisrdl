@@ -87,7 +87,7 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
 
 {%- if has_regs %}
 
-  localparam int AW = {{ interface.offset_bits }};
+  localparam int AW = {{ interface.addr_width }};
   localparam int DW = 32;
   localparam int DBW = DW/8;                    // Byte Width
 {%- endif %}
@@ -362,7 +362,7 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
   ) u_{{ reg.name|lower ~ multireg_idx }}_qe (
     .clk_i(clk_i),
     .rst_ni(rst_ni),
-    .d_i(&{{ regname }}_flds_we),
+    .d_i(&({{ regname }}_flds_we {{"| {}'h{:x}".format(reg.fields|length, reg.fields_no_write_en) if reg.fields_no_write_en }})),
     .q_o({{ regname }}_qe)
   );
       {%- endif %}
@@ -414,19 +414,19 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
       {%- if reg.external or reg.shadowed %}
     .re     ({{ "{}{}{}_re".format(clk_prefix, reg.name, multireg_suffix)|lower if reg.sw_readable or reg.shadowed else "1'b0" }}),
       {%- endif %}
-    .we     ({{ "{}{}_we".format(clk_prefix ~ regname, ("_gated" if reg.sw_write_en)) if reg.sw_writable else "1'b0"  }}),
-    .wd     ({{ "{}{}{}_wd{}{}".format(clk_prefix, regname, field_name if not reg.async_clk, "ata" if reg.async_clk, bit_index if reg.async_clk) if reg.sw_writable else "'0"  }}),
+    .we     ({{ "{}{}_we".format(clk_prefix ~ regname, ("_gated" if field.sw_write_en)) if field.sw_writable else "1'b0"  }}),
+    .wd     ({{ "{}{}{}_wd{}{}".format(clk_prefix, regname, field_name if not reg.async_clk, "ata" if reg.async_clk, bit_index if reg.async_clk) if field.sw_writable else "'0"  }}),
       {%- if not reg.external %}
-    .de     ({% if reg.hw_writable %}hw2reg.{{ sig_name }}.de{% else %}1'b0{% endif %}),
+    .de     ({{ "hw2reg.{}.de".format(sig_name ) if field.hw_writable else "1'b0" }}),
       {%- endif %}
-    .d      ({% if reg.hw_writable %}hw2reg.{{ sig_name }}.d{% else %}'0{% endif %}),
+    .d      ({{ "hw2reg.{}.d".format(sig_name ) if field.hw_writable else "'0" }}),
       {%- if reg.external %}
     .qre    ({{  "reg2hw.{}.re".format(sig_name) if reg.hwre or reg.shadowed }}),
       {%- endif %}
     .qe     ({{ "{}_flds_we[{}]".format(regname, loop.index0) if reg.needs_int_qe  }}),
     .q      ({{ "reg2hw.{}.q".format(sig_name) if field.hw_readable }}),
     .ds     ({{ "{}{}{}_ds{}".format(clk_prefix, regname, field_name, suffix) if reg.async_clk and reg.hw_writable }}),
-    .qs     ({{ "{}{}_qs{}".format(clk_prefix, regname ~ field_name, suffix) if reg.sw_readable }})
+    .qs     ({{ "{}{}_qs{}".format(clk_prefix, regname ~ field_name, suffix) if field.sw_readable }})
       {%- if not reg.external and reg.shadowed -%}
       ,
 
