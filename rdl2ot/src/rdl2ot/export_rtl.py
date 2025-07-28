@@ -33,7 +33,7 @@ def run(rdlc: RDLCompiler, obj: node.RootNode, out_dir: Path):
 
     reg_top_tpl = env.get_template("reg_top.sv.tpl")
     for interface in data["interfaces"]:
-        name = "_{}".format(interface["name"]) if "name" in interface else ""
+        name = "_{}".format(interface["name"].lower()) if "name" in interface else ""
         data_ = {"ip_name": ip_name, "interface": interface}
         # stream = reg_top_tpl.stream(data_)
         stream = reg_top_tpl.render(data_).replace(" \n", "\n")
@@ -81,7 +81,9 @@ class OtInterfaceBuilder:
         obj["swmod"] = field.get_property("swmod")
         obj["clear_onread"] = field.get_property("onread") == OnReadType.rclr
         obj["set_onread"] = field.get_property("onread") == OnReadType.rset
-        obj["mubi"] = field.get_property("mubi", default=False)
+        encode = field.get_property("encode", default=None)
+        if encode:
+            obj["encode"] = encode.type_name
         obj["async"] = field.get_property("async", default=None)
         obj["sync"] = field.get_property("sync", default=None)
         obj["reggen_sw_access"] = opentitan.get_sw_access_enum(field)
@@ -212,7 +214,7 @@ class OtInterfaceBuilder:
                 print(f"WARNING: Unsupported type: {type(child)}, skiping...")
                 continue
 
-        last_addr =  interface["regs"][-1]["offsets"][-1] + 4 if len(interface["regs"]) > 0 else 0
+        last_addr = interface["regs"][-1]["offsets"][-1] + 4 if len(interface["regs"]) > 0 else 0
         if len(interface["windows"]) > 0:
             last_addr = max(
                 last_addr, interface["windows"][-1]["offset"] + interface["windows"][-1]["size"]

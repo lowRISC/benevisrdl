@@ -27,11 +27,11 @@ package {{ ip_name }}_reg_pkg;
 
 {%- for interface in interfaces %}
   {%- set registers = interface.regs %}
-  {%- set interface_name = ("_" + interface.name) if interface.name %}
+  {%- set interface_name = ("_" + interface.name)|lower if interface.name %}
   {%- if registers|length > 0 %}
 
   ///////////////////////////////////////////////
-  // Typedefs for registers for {{ interface.name }} interface //
+  // Typedefs for registers for {{ interface.name|lower }} interface //
   ///////////////////////////////////////////////
     {%- for reg in registers -%}
       {%- set indent = "  " if reg.is_multifields %}
@@ -93,11 +93,11 @@ package {{ ip_name }}_reg_pkg;
 {%- endfor %}
 
 {%- for interface in interfaces %}
-  {%- set interface_name = ("_" + interface.name) if interface.name -%}
+  {%- set interface_name = ("_" + interface.name)|lower if interface.name -%}
   {%- set registers = interface.regs %}
   {%- if registers|length > 0 %}
 
-  // Register -> HW type for {{ interface.name }} interface
+  // Register -> HW type for {{ interface.name|lower }} interface
   typedef struct packed {
     {%- for reg in registers  %}
       {%- if reg.hw_readable %}
@@ -105,16 +105,16 @@ package {{ ip_name }}_reg_pkg;
     {{ ip_name }}_reg2hw_{{ reg.name|lower }}_{{"m" if reg.is_multireg}}reg_t{{ bits }} {{ reg.name|lower }};
       {%- endif %}
     {%- endfor %}
-  } {{ ip_name }}{{interface_name}}_reg2hw_t;
+  } {{ ip_name }}{{interface_name|lower}}_reg2hw_t;
   {%- endif %}
 {%- endfor %}
 
 {%- for interface in interfaces -%}
-  {%- set interface_name = ("_" + interface.name) if interface.name -%}
+  {%- set interface_name = ("_" + interface.name|lower) if interface.name -%}
   {%- set registers = interface.regs %}
   {%- if registers|length > 0 %}
 
-  // HW -> register type for {{ interface.name }} interface
+  // HW -> register type for {{ interface.name|lower}} interface
   typedef struct packed {
     {%- for reg in registers  %}
       {%- if reg.hw_writable %}
@@ -131,7 +131,7 @@ package {{ ip_name }}_reg_pkg;
   {%- set registers = interface.regs %}
   {%- if registers|length > 0 %}
 
-  // Register offsets for {{ interface.name }} interface
+  // Register offsets for {{ interface.name|lower}} interface
     {%- for interface in interfaces %}
       {%- set registers = interface.regs %}
       {%- set addr_width = interface.addr_width %}
@@ -154,7 +154,7 @@ package {{ ip_name }}_reg_pkg;
       {%- if reg.external %}
         {%- if not printed.header %}
 
-  // Reset values for hwext registers and their fields for {{ interface.name }} interface
+  // Reset values for hwext registers and their fields for {{ interface.name|lower}} interface
         {%- set printed.header = true %}
         {%- endif %}
         {%- for offset in reg.offsets %}
@@ -173,11 +173,11 @@ package {{ ip_name }}_reg_pkg;
 {%- endfor %}
 
 {%- for interface in interfaces %}
-  {%- set interface_name = ("_" + interface.name) if interface.name -%}
+  {%- set interface_name = ("_" + interface.name|lower) if interface.name -%}
   {%- set registers = interface.regs %}
   {%- if registers|length > 0 %}
 
-  // Register index for {{ interface.name }} interface
+  // Register index for {{ interface.name|lower}} interface
   typedef enum int {
     {%- for reg in registers %}
       {%- set out_loop = loop %}
@@ -192,12 +192,12 @@ package {{ ip_name }}_reg_pkg;
 {%- endfor %}
 
 {%- for interface in interfaces %}
-  {%- set interface_name = ("_" + interface.name) if interface.name -%}
+  {%- set interface_name = ("_" + interface.name|lower) if interface.name -%}
   {%- set ns = namespace(index=0) %}
   {%- set registers = interface.regs %}
   {%- if registers|length > 0 %}
 
-  // Register width information to check illegal writes for {{ interface.name }} interface
+  // Register width information to check illegal writes for {{ interface.name|lower}} interface
   parameter logic [3:0] {{ (ip_name ~ interface_name)|upper }}_PERMIT [{{ interface.num_regs }}] = '{
     {%- for reg in registers %}
       {%- set out_loop = loop%}
@@ -217,7 +217,7 @@ package {{ ip_name }}_reg_pkg;
   {%- set windows = interface.windows %}
   {%- if windows|length > 0 %}
 
-  // Window parameters for {{ interface.name }} interface
+  // Window parameters for {{ interface.name|lower}} interface
     {%- for win in windows  %}
   parameter logic [{{ addr_with_name }}-1:0] {{ ip_name|upper }}_{{ win.name|upper }}_OFFSET = {{ interface.addr_width}}'h {{ win.offset }};
   parameter int unsigned      {{ ip_name|upper }}_{{ win.name|upper }}_SIZE   = 'h {{ "{:x}".format(win.size) }};

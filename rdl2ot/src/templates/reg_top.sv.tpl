@@ -9,7 +9,7 @@
 {%- set windows = interface.windows %}
 {%- set has_windows = windows|length > 0 %}
 {%- set has_regs = registers|length > 0 %}
-{%- set interface_name = ("_" + interface.name) if interface.name %}
+{%- set interface_name = ("_" + interface.name|lower) if interface.name %}
 {%- set clk_name = "aon_" %}
 
 module {{ ip_name|lower }}{{interface_name}}_reg_top (
@@ -216,8 +216,8 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
       {%- endif %}
     {%- endfor %}
     {%- if reg.async_clk %} 
-  logic [{{ reg.msb }}:0] {{reg.name ~ index }}_qs;
-  logic {{ reg.name ~ index }}_busy;
+  logic [{{ reg.msb }}:0] {{reg.name|lower ~ index }}_qs;
+  logic {{ reg.name|lower ~ index }}_busy;
     {%- endif %}
   {%- endfor %}
 {%- endfor %}
@@ -235,10 +235,10 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
         {%- set index = ('_' ~ multireg_idx|string) if reg.is_multireg %}
         {%- set sig_name = (clk_name ~ reg.name ~ index)|lower %}
 
-        {%- set src_we_expr = "{}_we".format(reg.name ~ index) if reg.needs_write_en else "'0" %}
+        {%- set src_we_expr = "{}_we".format(reg.name|lower ~ index) if reg.needs_write_en else "'0" %}
         {%- set src_wd_expr = "reg_wdata[{}:0]".format(reg.msb) if reg.needs_write_en else "'0" %}
-        {%- set src_re_expr = "{}_re".format(reg.name ~ index) if reg.needs_read_en else "'0" %}
-        {%- set src_regwen_expr = "{}_qs".format(reg.swwe) if reg.swwe else "'0" %}
+        {%- set src_re_expr = "{}_re".format(reg.name|lower ~ index) if reg.needs_read_en else "'0" %}
+        {%- set src_regwen_expr = "{}_qs".format(reg.write_en_signal) if reg.sw_write_en else "'0" %}
         {%- set dst_we_expr = "{}_we".format(sig_name) if reg.needs_write_en %}
         {%- set dst_wd_expr = "{}_wdata".format(sig_name) if reg.needs_write_en %}
         {%- set dst_re_expr = "{}_re".format(sig_name) if reg.needs_read_en %}
@@ -300,7 +300,7 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
     .ResetVal({{ reset_expr }}),
     .BitMask({{ "{}'h{:x}".format(reg.msb + 1, reg.bitmask) }}),
     .DstWrReq({{ dst_wr_req }})
-  ) u_{{ reg.name ~ index }}_cdc (
+  ) u_{{ reg.name|lower ~ index }}_cdc (
     .clk_src_i    (clk_i),
     .rst_src_ni   (rst_ni),
     .clk_dst_i    (clk_{{ clk_name }}i),
@@ -309,8 +309,8 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
     .src_we_i     ({{ src_we_expr }}),
     .src_re_i     ({{ src_re_expr }}),
     .src_wd_i     ({{ src_wd_expr }}),
-    .src_busy_o   ({{ reg.name ~ index }}_busy),
-    .src_qs_o     ({{ reg.name ~ index }}_qs), // for software read back
+    .src_busy_o   ({{ reg.name|lower ~ index }}_busy),
+    .src_qs_o     ({{ reg.name|lower ~ index }}_qs), // for software read back
     .dst_update_i ({{ dst_qe_expr }}),
     .dst_ds_i     ({{ dst_ds_expr }}),
     .dst_qs_i     ({{ sig_name }}_qs),
@@ -373,12 +373,12 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
     {%- if reg.sw_write_en and reg.needs_write_en %}
   // Create REGWEN-gated WE signal
   logic {{ regname }}_gated_we;
-      {%- set assign.expr = ('clk_base_name_' ~ regname ~ '_we')|lower %}
+      {%- set assign.expr = (clk_prefix ~ regname ~ '_we')|lower %}
       {%- if reg.sw_write_en %}
         {%- set wr_en_sig_name = reg.fields[0].write_en_signal.name|lower %}
         {%- set wr_en_reg_name = reg.fields[0].write_en_signal.parent_name|lower %}
-        {%- set assign.expr = ('clk_base_name_' ~ regname|lower ~ '_regwen') if reg.async else "{}_qs".format(wr_en_reg_name) %}
-        {%- if reg.fields[0].write_en_signal.mubi %}
+        {%- set assign.expr = (clk_prefix ~ regname|lower ~ '_regwen') if reg.async else "{}_qs".format(wr_en_reg_name) %}
+        {%- if "MultiBitBool" in reg.fields[0].write_en_signal.encode %}
           {%- set width = reg.fields[0].write_en_signal.width %}
           {%- set assign.expr = "prim_mubi_pkg::mubi{}_test_true_strict(prim_mubi_pkg::mubi{}_t'({}_qs))".format(width, width, wr_en_sig_name)|lower %}
         {%- endif %}
@@ -398,7 +398,7 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
     ,
     .SwAccess(prim_subreg_pkg::SwAccess{{ field.reggen_sw_access }}),
     .RESVAL  ({{ "{}'h{:x}".format(field.width, field.reset) }}),
-    .Mubi    (1'b{{ field.mubi|int }})
+    .Mubi    (1'b{{ ("MultiBitBool" in field.encode)|int }})
       {%- endif %}
   ) u_{{ regname ~ field_name }} (
       {%- if not reg.external %}
@@ -473,7 +473,7 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
   always_comb begin
     wr_err = (reg_we &
   {%- set ns = namespace(counter=0) %}
-  {%- set interface_name = ("_" + interface.name) if interface.name -%}
+  {%- set interface_name = ("_" + interface.name|lower) if interface.name -%}
   {%- for reg in registers %}
     {%- set outer_loop = loop -%}
     {%- for offset in reg.offsets %}
@@ -516,7 +516,7 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
   {%- for reg in registers %}
     {%- for offset in reg.offsets %}
       {%- set multireg_index = ('_' ~ loop.index0|string) if reg.offsets|length > 1 %}
-      {%- set expr = "{}{}{}_we".format(reg.name|lower, multireg_index, "_gated" if not reg.async and reg.sw_write_en) if reg.needs_write_en else "1'b0" %}
+      {%- set expr = "{}{}{}_we".format(reg.name, multireg_index, "_gated" if not reg.async and reg.sw_write_en)|lower if reg.needs_write_en else "1'b0" %}
     reg_we_check[{{ ns.counter }}] = {{ expr }};
       {%- set ns.counter = ns.counter + 1 %}
     {%- endfor %}
@@ -539,7 +539,7 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
         {%- for field in reg.fields %}
             {%- set field_name = ('_' ~ field.name|lower) if reg.is_multifields %}
             {%- set index = "{}:{}".format(field.msb, field.lsb) if field.width > 1 else field.msb %}
-            {%- set expr = "{}{}{}_qs".format(reg.name, field_name, multireg_index) if field.sw_readable else "'0" %}
+            {%- set expr = "{}{}{}_qs".format(reg.name, field_name, multireg_index)|lower if field.sw_readable else "'0" %}
         reg_rdata_next{{ "[{}] = {}".format(index, expr)|lower }};
         {%- endfor %}
       {%- endif %}
@@ -584,8 +584,11 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
 
   // Collect up storage and update errors
   assign shadowed_storage_err_o = |{
+    {%- set ns = namespace(is_first = true) %}
     {%- for reg in registers  %}
       {%- if reg.shadowed and not reg.external %}
+        {{- "," if not ns.is_first }}
+        {%- set ns.is_first = false %}
         {%- for field in reg.fields  %}
     {{ "{}_{}_storage_err".format(reg.name, field.name)|lower }}
     {{- "," if not loop.last }}
@@ -594,8 +597,11 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
     {%- endfor %}
   };
   assign shadowed_update_err_o = |{
+    {%- set ns = namespace(is_first = true) %}
     {%- for reg in registers  %}
       {%- if reg.shadowed and not reg.external %}
+        {{- "," if not ns.is_first }}
+        {%- set ns.is_first = false %}
         {%- for field in reg.fields  %}
     {{ "{}_{}_update_err".format(reg.name, field.name)|lower }}
     {{- "," if not loop.last }}
@@ -618,7 +624,7 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
     unique case (1'b1)
     {%- for index, busy_signal in interface.async_registers %}
       addr_hit[{{ index }}]: begin
-        reg_busy_sel = {{ busy_signal }}_busy;
+        reg_busy_sel = {{ busy_signal|lower}}_busy;
       end
     {%- endfor %}
       default: begin
