@@ -10,6 +10,7 @@
 {%- set has_windows = windows|length > 0 %}
 {%- set has_regs = registers|length > 0 %}
 {%- set interface_name = ("_" + interface.name|lower) if interface.name %}
+{%- set num_regs_digits = interface.num_regs | string | length %}
 {%- set clk_name = "aon_" %}
 
 module {{ ip_name|lower }}{{interface_name}}_reg_top (
@@ -460,7 +461,7 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
   {%- set ns = namespace(counter=0) %}
   {%- for reg in registers %}
     {%- for offset in reg.offsets %}
-      {%- set index = "{:>2}".format(ns.counter) %}
+      {%- set index = "{num:>{width}}".format(num=ns.counter, width=num_regs_digits) %}
       {%- set ns.counter = ns.counter + 1 %}
     addr_hit[{{ index }}] = (reg_addr == {{ (ip_name ~ '_' ~ reg.name)|upper }}{% if reg.offsets|length > 1 %}_{{ loop.index0 }}{% endif %}_OFFSET);
     {%- endfor %}
@@ -477,7 +478,7 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
   {%- for reg in registers %}
     {%- set outer_loop = loop -%}
     {%- for offset in reg.offsets %}
-      {%- set index = "{:>2}".format(ns.counter) %}
+      {%- set index = "{num:>{width}}".format(num=ns.counter, width=num_regs_digits) %}
       {%- set ns.counter = ns.counter + 1 %}
       {%- if loop.first and outer_loop.first -%} ( {%- endif %}
                (addr_hit[{{ index }}] & (|({{ (ip_name ~ interface_name)|upper}}_PERMIT[{{ index }}] & ~reg_be))) 
