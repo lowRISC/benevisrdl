@@ -36,7 +36,7 @@ package lc_ctrl_reg_pkg;
     struct packed {
       logic        q;
       logic        qe;
-    } fatal_prog_error;
+    } fatal_bus_integ_error;
     struct packed {
       logic        q;
       logic        qe;
@@ -44,7 +44,7 @@ package lc_ctrl_reg_pkg;
     struct packed {
       logic        q;
       logic        qe;
-    } fatal_bus_integ_error;
+    } fatal_prog_error;
   } lc_ctrl_reg2hw_alert_test_reg_t;
 
   typedef struct packed {
@@ -61,11 +61,11 @@ package lc_ctrl_reg_pkg;
     struct packed {
       logic        q;
       logic        qe;
-    } ext_clock_en;
+    } volatile_raw_unlock;
     struct packed {
       logic        q;
       logic        qe;
-    } volatile_raw_unlock;
+    } ext_clock_en;
   } lc_ctrl_reg2hw_transition_ctrl_reg_t;
 
   typedef struct packed {
@@ -86,40 +86,40 @@ package lc_ctrl_reg_pkg;
   typedef struct packed {
     struct packed {
       logic        d;
-    } initialized;
-    struct packed {
-      logic        d;
-    } ready;
-    struct packed {
-      logic        d;
-    } ext_clock_switched;
-    struct packed {
-      logic        d;
-    } transition_successful;
-    struct packed {
-      logic        d;
-    } transition_count_error;
-    struct packed {
-      logic        d;
-    } transition_error;
-    struct packed {
-      logic        d;
-    } token_error;
-    struct packed {
-      logic        d;
-    } flash_rma_error;
-    struct packed {
-      logic        d;
-    } otp_error;
-    struct packed {
-      logic        d;
-    } state_error;
+    } otp_partition_error;
     struct packed {
       logic        d;
     } bus_integ_error;
     struct packed {
       logic        d;
-    } otp_partition_error;
+    } state_error;
+    struct packed {
+      logic        d;
+    } otp_error;
+    struct packed {
+      logic        d;
+    } flash_rma_error;
+    struct packed {
+      logic        d;
+    } token_error;
+    struct packed {
+      logic        d;
+    } transition_error;
+    struct packed {
+      logic        d;
+    } transition_count_error;
+    struct packed {
+      logic        d;
+    } transition_successful;
+    struct packed {
+      logic        d;
+    } ext_clock_switched;
+    struct packed {
+      logic        d;
+    } ready;
+    struct packed {
+      logic        d;
+    } initialized;
   } lc_ctrl_hw2reg_status_reg_t;
 
   typedef struct packed {
@@ -133,10 +133,10 @@ package lc_ctrl_reg_pkg;
   typedef struct packed {
     struct packed {
       logic        d;
-    } ext_clock_en;
+    } volatile_raw_unlock;
     struct packed {
       logic        d;
-    } volatile_raw_unlock;
+    } ext_clock_en;
   } lc_ctrl_hw2reg_transition_ctrl_reg_t;
 
   typedef struct packed {
@@ -170,19 +170,19 @@ package lc_ctrl_reg_pkg;
   typedef struct packed {
     struct packed {
       logic [15:0] d;
-    } product_id;
+    } silicon_creator_id;
     struct packed {
       logic [15:0] d;
-    } silicon_creator_id;
+    } product_id;
   } lc_ctrl_hw2reg_hw_revision0_reg_t;
 
   typedef struct packed {
     struct packed {
-      logic [7:0]  d;
-    } revision_id;
-    struct packed {
       logic [23:0] d;
     } reserved;
+    struct packed {
+      logic [7:0]  d;
+    } revision_id;
   } lc_ctrl_hw2reg_hw_revision1_reg_t;
 
   typedef struct packed {
@@ -263,44 +263,88 @@ package lc_ctrl_reg_pkg;
   // Reset values for hwext registers and their fields for regs interface
   parameter logic [2:0] LC_CTRL_ALERT_TEST_RESVAL = 3'h 0;
   parameter logic [0:0] LC_CTRL_ALERT_TEST_FATAL_PROG_ERROR_RESVAL = 1'h 0;
-  parameter logic [1:1] LC_CTRL_ALERT_TEST_FATAL_STATE_ERROR_RESVAL = 1'h 0;
-  parameter logic [2:2] LC_CTRL_ALERT_TEST_FATAL_BUS_INTEG_ERROR_RESVAL = 1'h 0;
+  parameter logic [0:0] LC_CTRL_ALERT_TEST_FATAL_STATE_ERROR_RESVAL = 1'h 0;
+  parameter logic [0:0] LC_CTRL_ALERT_TEST_FATAL_BUS_INTEG_ERROR_RESVAL = 1'h 0;
   parameter logic [11:0] LC_CTRL_STATUS_RESVAL = 12'h 0;
+  parameter logic [0:0] LC_CTRL_STATUS_INITIALIZED_RESVAL = 1'h 0;
+  parameter logic [0:0] LC_CTRL_STATUS_READY_RESVAL = 1'h 0;
+  parameter logic [0:0] LC_CTRL_STATUS_EXT_CLOCK_SWITCHED_RESVAL = 1'h 0;
+  parameter logic [0:0] LC_CTRL_STATUS_TRANSITION_SUCCESSFUL_RESVAL = 1'h 0;
+  parameter logic [0:0] LC_CTRL_STATUS_TRANSITION_COUNT_ERROR_RESVAL = 1'h 0;
+  parameter logic [0:0] LC_CTRL_STATUS_TRANSITION_ERROR_RESVAL = 1'h 0;
+  parameter logic [0:0] LC_CTRL_STATUS_TOKEN_ERROR_RESVAL = 1'h 0;
+  parameter logic [0:0] LC_CTRL_STATUS_FLASH_RMA_ERROR_RESVAL = 1'h 0;
+  parameter logic [0:0] LC_CTRL_STATUS_OTP_ERROR_RESVAL = 1'h 0;
+  parameter logic [0:0] LC_CTRL_STATUS_STATE_ERROR_RESVAL = 1'h 0;
+  parameter logic [0:0] LC_CTRL_STATUS_BUS_INTEG_ERROR_RESVAL = 1'h 0;
+  parameter logic [0:0] LC_CTRL_STATUS_OTP_PARTITION_ERROR_RESVAL = 1'h 0;
   parameter logic [7:0] LC_CTRL_CLAIM_TRANSITION_IF_RESVAL = 8'h 69;
   parameter logic [7:0] LC_CTRL_CLAIM_TRANSITION_IF_MUTEX_RESVAL = 8'h 69;
   parameter logic [0:0] LC_CTRL_TRANSITION_REGWEN_RESVAL = 1'h 0;
   parameter logic [0:0] LC_CTRL_TRANSITION_REGWEN_REGWEN_RESVAL = 1'h 0;
   parameter logic [0:0] LC_CTRL_TRANSITION_CMD_RESVAL = 1'h 0;
+  parameter logic [0:0] LC_CTRL_TRANSITION_CMD_START_RESVAL = 1'h 0;
   parameter logic [1:0] LC_CTRL_TRANSITION_CTRL_RESVAL = 2'h 0;
+  parameter logic [0:0] LC_CTRL_TRANSITION_CTRL_EXT_CLOCK_EN_RESVAL = 1'h 0;
+  parameter logic [0:0] LC_CTRL_TRANSITION_CTRL_VOLATILE_RAW_UNLOCK_RESVAL = 1'h 0;
   parameter logic [31:0] LC_CTRL_TRANSITION_TOKEN_0_RESVAL = 32'h 0;
+  parameter logic [31:0] LC_CTRL_TRANSITION_TOKEN_0_TRANSITION_TOKEN_0_RESVAL = 32'h 0;
   parameter logic [31:0] LC_CTRL_TRANSITION_TOKEN_1_RESVAL = 32'h 0;
+  parameter logic [31:0] LC_CTRL_TRANSITION_TOKEN_1_TRANSITION_TOKEN_1_RESVAL = 32'h 0;
   parameter logic [31:0] LC_CTRL_TRANSITION_TOKEN_2_RESVAL = 32'h 0;
+  parameter logic [31:0] LC_CTRL_TRANSITION_TOKEN_2_TRANSITION_TOKEN_2_RESVAL = 32'h 0;
   parameter logic [31:0] LC_CTRL_TRANSITION_TOKEN_3_RESVAL = 32'h 0;
+  parameter logic [31:0] LC_CTRL_TRANSITION_TOKEN_3_TRANSITION_TOKEN_3_RESVAL = 32'h 0;
   parameter logic [29:0] LC_CTRL_TRANSITION_TARGET_RESVAL = 30'h 0;
+  parameter logic [29:0] LC_CTRL_TRANSITION_TARGET_STATE_RESVAL = 30'h 0;
   parameter logic [31:0] LC_CTRL_OTP_VENDOR_TEST_CTRL_RESVAL = 32'h 0;
+  parameter logic [31:0] LC_CTRL_OTP_VENDOR_TEST_CTRL_OTP_VENDOR_TEST_CTRL_RESVAL = 32'h 0;
   parameter logic [31:0] LC_CTRL_OTP_VENDOR_TEST_STATUS_RESVAL = 32'h 0;
+  parameter logic [31:0] LC_CTRL_OTP_VENDOR_TEST_STATUS_OTP_VENDOR_TEST_STATUS_RESVAL = 32'h 0;
   parameter logic [29:0] LC_CTRL_LC_STATE_RESVAL = 30'h 0;
+  parameter logic [29:0] LC_CTRL_LC_STATE_STATE_RESVAL = 30'h 0;
   parameter logic [4:0] LC_CTRL_LC_TRANSITION_CNT_RESVAL = 5'h 0;
+  parameter logic [4:0] LC_CTRL_LC_TRANSITION_CNT_CNT_RESVAL = 5'h 0;
   parameter logic [31:0] LC_CTRL_LC_ID_STATE_RESVAL = 32'h 0;
+  parameter logic [31:0] LC_CTRL_LC_ID_STATE_CNT_RESVAL = 32'h 0;
   parameter logic [31:0] LC_CTRL_HW_REVISION0_RESVAL = 32'h 0;
+  parameter logic [15:0] LC_CTRL_HW_REVISION0_PRODUCT_ID_RESVAL = 16'h 0;
+  parameter logic [15:0] LC_CTRL_HW_REVISION0_SILICON_CREATOR_ID_RESVAL = 16'h 0;
   parameter logic [31:0] LC_CTRL_HW_REVISION1_RESVAL = 32'h 0;
-  parameter logic [31:8] LC_CTRL_HW_REVISION1_RESERVED_RESVAL = 24'h 0;
+  parameter logic [7:0] LC_CTRL_HW_REVISION1_REVISION_ID_RESVAL = 8'h 0;
+  parameter logic [23:0] LC_CTRL_HW_REVISION1_RESERVED_RESVAL = 24'h 0;
   parameter logic [31:0] LC_CTRL_DEVICE_ID_0_RESVAL = 32'h 0;
+  parameter logic [31:0] LC_CTRL_DEVICE_ID_0_DEVICE_ID_0_RESVAL = 32'h 0;
   parameter logic [31:0] LC_CTRL_DEVICE_ID_1_RESVAL = 32'h 0;
+  parameter logic [31:0] LC_CTRL_DEVICE_ID_1_DEVICE_ID_1_RESVAL = 32'h 0;
   parameter logic [31:0] LC_CTRL_DEVICE_ID_2_RESVAL = 32'h 0;
+  parameter logic [31:0] LC_CTRL_DEVICE_ID_2_DEVICE_ID_2_RESVAL = 32'h 0;
   parameter logic [31:0] LC_CTRL_DEVICE_ID_3_RESVAL = 32'h 0;
+  parameter logic [31:0] LC_CTRL_DEVICE_ID_3_DEVICE_ID_3_RESVAL = 32'h 0;
   parameter logic [31:0] LC_CTRL_DEVICE_ID_4_RESVAL = 32'h 0;
+  parameter logic [31:0] LC_CTRL_DEVICE_ID_4_DEVICE_ID_4_RESVAL = 32'h 0;
   parameter logic [31:0] LC_CTRL_DEVICE_ID_5_RESVAL = 32'h 0;
+  parameter logic [31:0] LC_CTRL_DEVICE_ID_5_DEVICE_ID_5_RESVAL = 32'h 0;
   parameter logic [31:0] LC_CTRL_DEVICE_ID_6_RESVAL = 32'h 0;
+  parameter logic [31:0] LC_CTRL_DEVICE_ID_6_DEVICE_ID_6_RESVAL = 32'h 0;
   parameter logic [31:0] LC_CTRL_DEVICE_ID_7_RESVAL = 32'h 0;
+  parameter logic [31:0] LC_CTRL_DEVICE_ID_7_DEVICE_ID_7_RESVAL = 32'h 0;
   parameter logic [31:0] LC_CTRL_MANUF_STATE_0_RESVAL = 32'h 0;
+  parameter logic [31:0] LC_CTRL_MANUF_STATE_0_MANUF_STATE_0_RESVAL = 32'h 0;
   parameter logic [31:0] LC_CTRL_MANUF_STATE_1_RESVAL = 32'h 0;
+  parameter logic [31:0] LC_CTRL_MANUF_STATE_1_MANUF_STATE_1_RESVAL = 32'h 0;
   parameter logic [31:0] LC_CTRL_MANUF_STATE_2_RESVAL = 32'h 0;
+  parameter logic [31:0] LC_CTRL_MANUF_STATE_2_MANUF_STATE_2_RESVAL = 32'h 0;
   parameter logic [31:0] LC_CTRL_MANUF_STATE_3_RESVAL = 32'h 0;
+  parameter logic [31:0] LC_CTRL_MANUF_STATE_3_MANUF_STATE_3_RESVAL = 32'h 0;
   parameter logic [31:0] LC_CTRL_MANUF_STATE_4_RESVAL = 32'h 0;
+  parameter logic [31:0] LC_CTRL_MANUF_STATE_4_MANUF_STATE_4_RESVAL = 32'h 0;
   parameter logic [31:0] LC_CTRL_MANUF_STATE_5_RESVAL = 32'h 0;
+  parameter logic [31:0] LC_CTRL_MANUF_STATE_5_MANUF_STATE_5_RESVAL = 32'h 0;
   parameter logic [31:0] LC_CTRL_MANUF_STATE_6_RESVAL = 32'h 0;
+  parameter logic [31:0] LC_CTRL_MANUF_STATE_6_MANUF_STATE_6_RESVAL = 32'h 0;
   parameter logic [31:0] LC_CTRL_MANUF_STATE_7_RESVAL = 32'h 0;
+  parameter logic [31:0] LC_CTRL_MANUF_STATE_7_MANUF_STATE_7_RESVAL = 32'h 0;
 
   // Register index for regs interface
   typedef enum int {

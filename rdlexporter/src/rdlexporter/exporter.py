@@ -4,6 +4,7 @@
 
 from pathlib import Path
 from systemrdl import RDLCompiler
+from systemrdl.rdltypes import AccessType, OnReadType, OnWriteType
 from systemrdl.rdltypes.user_enum import UserEnumMeta
 from systemrdl.ast.literals import StringLiteral, BoolLiteral, IntLiteral, BuiltinEnumLiteral
 from systemrdl.ast.references import InstRef
@@ -31,6 +32,23 @@ class RdlExporter:
     def _is_nested(self) -> bool:
         return self.indent_pos > 0
 
+    def _get_field_limits(self, field: Field) -> (int, int):
+        return (
+            (field.msb, field.lsb)
+            if isinstance(field.msb, int)
+            else (field.msb.get_value(), field.lsb.get_value())
+        )
+
+    def _get_register_offset(self, reg: Reg) -> int:
+        return reg.addr_offset if isinstance(reg.addr_offset, int) else reg.addr_offset.get_value()
+
+    def _get_register_array_dim(self, reg: Reg) -> int:
+        return (
+            reg.array_dimensions[0]
+            if isinstance(reg.array_dimensions[0], int)
+            else reg.array_dimensions[0].get_value()
+        )
+
     def _emit_dynamic_assignment(self) -> None:
         # Nothing to be emited
         current_scope = self.ast_path[-1]
@@ -52,12 +70,20 @@ class RdlExporter:
                 val = obj.type_name
             elif isinstance(obj, BuiltinEnumLiteral):
                 val = obj.val.name
+            elif isinstance(obj, AccessType | OnReadType | OnWriteType):
+                val = obj.name
             elif isinstance(obj, StringLiteral):
                 val = f'''"{obj.get_value()}"'''
             elif isinstance(obj, BoolLiteral):
                 val = str(obj.get_value()).lower()
             elif isinstance(obj, IntLiteral):
                 val = f"0x{obj.get_value():x}"
+            elif isinstance(obj, str):
+                val = f'''"{obj}"'''
+            elif isinstance(obj, bool):
+                val = str(obj).lower()
+            elif isinstance(obj, int):
+                val = f"0x{obj:x}"
             elif isinstance(obj, InstRef):
                 # This should be emited at a higher scope indicated by `ref_root._scope_name`.
                 ref = obj.get_value()
@@ -71,7 +97,8 @@ class RdlExporter:
                 )
                 continue
             else:
-                print(f"Warning: Type {type(obj)} not implemented.")
+                print(f"Warning: Type {type(obj)} not implemented, skipping it.")
+                continue
 
             self.stream += self._indent() + f"{name} = {val};\n"
 
@@ -82,8 +109,8 @@ class RdlExporter:
         if len(component.array_dimensions) > 1:
             print("Error: Unsupported multidimentional arrays.")
             raise RuntimeError
-
-        array_str = f"[{component.array_dimensions[0].get_value()}]"
+        dim = self._get_register_array_dim(component)
+        array_str = f"[{dim}]"
         return array_str
 
     def _emit_parameters(self, parameters: list) -> None:
@@ -126,7 +153,7 @@ class RdlExporter:
         self.indent_pos += self.indent_width
         self._emit_property(field.properties)
         self.indent_pos -= self.indent_width
-        msb, lsb = (field.msb.get_value(), field.lsb.get_value())
+        msb, lsb = self._get_field_limits(field)
         self.stream += self._indent() + f"}} {field.inst_name}[{msb}:{lsb}];\n"
         self.ast_path.pop()
 
@@ -144,7 +171,7 @@ class RdlExporter:
             else:
                 self._raise_type_error(type(child))
         self.indent_pos -= self.indent_width
-        offset = register.addr_offset.get_value()
+        offset = self._get_register_offset(register)
         self.stream += self._indent() + f"}} {register.inst_name}" + self._arrays(register)
         self.stream += f" @ 0x{offset:X};\n"
         self.ast_path.pop()

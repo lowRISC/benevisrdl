@@ -5,6 +5,7 @@
 
 import click
 import sys
+from pathlib import Path
 
 
 @click.group()
@@ -37,7 +38,7 @@ def export_rtl(input_file: str, out_dir: str):
     import export_rtl
 
     try:
-        export_rtl.run(rdlc, root, out_dir)
+        export_rtl.run(rdlc, root, Path(out_dir))
     except RDLCompileError:
         sys.exit(1)
 
