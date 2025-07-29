@@ -397,7 +397,7 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
       {%- if not reg.external -%}
     ,
     .SwAccess(prim_subreg_pkg::SwAccess{{ field.reggen_sw_access }}),
-    .RESVAL  ({{ "{}'h{:x}".format(field.width, field.reset) }}),
+    .RESVAL  ({{ "{}'h{:x}".format(field.width, (field.reset if field.reset else 0)) }}),
     .Mubi    (1'b{{ ("MultiBitBool" in field.encode)|int }})
       {%- endif %}
   ) u_{{ regname ~ field_name }} (

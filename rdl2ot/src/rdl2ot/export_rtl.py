@@ -66,9 +66,8 @@ class OtInterfaceBuilder:
         obj["msb"] = field.msb
         obj["width"] = field.msb - field.lsb + 1
         obj["bitmask"] = (1 << (field.msb + 1)) - (1 << field.lsb)
-        obj["reset"] = (
-            field.get_property("reset") if isinstance(field.get_property("reset"), int) else 0
-        )
+        if isinstance(field.get_property("reset"), int):
+            obj["reset"] = field.get_property("reset")
         obj["hw_readable"] = field.is_hw_readable
         obj["hw_writable"] = field.is_hw_writable
         obj["sw_readable"] = field.is_sw_readable
