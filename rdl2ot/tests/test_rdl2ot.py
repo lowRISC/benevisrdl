@@ -23,19 +23,18 @@ def run_cli_tool(input_file_path: Path, output_dir_path: Path):
 
 
 def run_ip_test(tmp_path: Path, ip_block: str):
-    for outfile in ["reg_pkg.sv", "reg_top.sv"]:
-        input_rdl = SNAPSHOTS_DIR / f"{ip_block}.rdl"
-        snapshot_file = SNAPSHOTS_DIR / f"{ip_block}_{outfile}"
+    input_rdl = SNAPSHOTS_DIR / f"{ip_block}.rdl"
+    cli_result = run_cli_tool(input_rdl, tmp_path)
+    assert cli_result.returncode == 0, f"CLI exited with error: {cli_result.stderr}"
+    assert "Successfully finished!" in cli_result.stdout  # Check for success message
+
+    files = list(tmp_path.glob(f"*{ip_block}*.sv"))
+    for outfile in files:
+        snapshot_file = SNAPSHOTS_DIR / outfile.name
         snapshot_content = snapshot_file.read_text(encoding="utf-8")
-        output_file = tmp_path / f"{ip_block}_{outfile}"
-        cli_result = run_cli_tool(input_rdl, tmp_path)
-        assert cli_result.returncode == 0, f"CLI exited with error: {cli_result.stderr}"
-        assert "Successfully finished!" in cli_result.stdout  # Check for success message
-
-        actual_output_content = output_file.read_text(encoding="utf-8")
-
+        actual_output_content = outfile.read_text(encoding="utf-8")
         assert actual_output_content == snapshot_content, (
-            f"Output mismatch, to debug, run:\nmeld {output_file} {snapshot_file}\n"
+            f"Output mismatch, to debug, run:\nmeld {outfile} {snapshot_file}\n"
         )
 
 
