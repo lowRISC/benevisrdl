@@ -7,8 +7,9 @@ from systemrdl import RDLCompiler
 from systemrdl.rdltypes import AccessType, OnReadType, OnWriteType
 from systemrdl.rdltypes.user_enum import UserEnumMeta
 from systemrdl.ast.literals import StringLiteral, BoolLiteral, IntLiteral, BuiltinEnumLiteral
+from systemrdl.ast.cast import AssignmentCast
 from systemrdl.ast.references import InstRef
-from systemrdl.component import Addrmap, Reg, Field, Mem
+from systemrdl.component import Addrmap, Reg, Field, Mem, AddressableComponent
 from dataclasses import dataclass, field
 
 
@@ -39,8 +40,12 @@ class RdlExporter:
             else (field.msb.get_value(), field.lsb.get_value())
         )
 
-    def _get_register_offset(self, reg: Reg) -> int:
-        return reg.addr_offset if isinstance(reg.addr_offset, int) else reg.addr_offset.get_value()
+    def _get_offset(self, comp: AddressableComponent) -> str:
+        if isinstance(comp.addr_offset, AssignmentCast):
+            return " @ 0x{:X}".format(comp.addr_offset.get_value())
+        if isinstance(comp.addr_offset, int):
+            return " @ 0x{:X}".format(comp.addr_offset)
+        return ""
 
     def _get_register_array_dim(self, reg: Reg) -> int:
         return (
@@ -142,7 +147,9 @@ class RdlExporter:
         self.indent_pos += self.indent_width
         self._emit_property(mem.properties)
         self.indent_pos -= self.indent_width
-        self.stream += self._indent() + f"}} {mem.inst_name};\n"
+        self.stream += self._indent() + f"}} {mem.inst_name}" + self._arrays(mem)
+        offset = self._get_offset(mem)
+        self.stream += f"{offset};\n"
         self.ast_path.pop()
 
     def _emit_field(self, field: Field) -> None:
@@ -171,9 +178,9 @@ class RdlExporter:
             else:
                 self._raise_type_error(type(child))
         self.indent_pos -= self.indent_width
-        offset = self._get_register_offset(register)
         self.stream += self._indent() + f"}} {register.inst_name}" + self._arrays(register)
-        self.stream += f" @ 0x{offset:X};\n"
+        offset = self._get_offset(register)
+        self.stream += f"{offset};\n"
         self.ast_path.pop()
 
     def _emit_addrmap(self, name: str, addrmap: Addrmap) -> None:
