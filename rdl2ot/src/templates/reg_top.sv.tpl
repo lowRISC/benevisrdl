@@ -165,7 +165,7 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
   tlul_pkg::tl_d2h_t tl_o_pre;
   tlul_rsp_intg_gen #(
     .EnableRspIntgGen(1),
-    .EnableDataIntgGen(1)
+    .EnableDataIntgGen({{ (not interface.any_integrity_bypass)|int }})
   ) u_rsp_intg_gen (
     .tl_i(tl_o_pre),
     .tl_o(tl_o)

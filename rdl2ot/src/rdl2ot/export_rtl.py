@@ -102,6 +102,7 @@ class OtInterfaceBuilder:
         obj["width"] = mem.get_property("memwidth")
         obj["offset"] = mem.address_offset
         obj["size"] = obj["width"] * obj["entries"] // 8
+        obj["integrity_bypass"] = mem.get_property("integrity_bypass", default=False)
         self.all_async_clk &= bool(mem.get_property("async_clk", default=False))
         self.num_windows += 1
         return obj
@@ -276,4 +277,7 @@ class OtInterfaceBuilder:
             interface["any_async_clk"] = self.any_async_clk
             interface["all_async_clk"] = self.all_async_clk
             interface["any_shadowed_reg"] = self.any_shadowed_reg
+            interface["any_integrity_bypass"] = any(
+                [win["integrity_bypass"] for win in interface["windows"]]
+            )
         return obj
