@@ -44,6 +44,7 @@ def run(rdlc: RDLCompiler, obj: node.RootNode, out_dir: Path):
 
 class OtInterfaceBuilder:
     num_regs: int = 0  # The number of registers of an interface
+    num_windows: int = 0  # The number of registers of an interface
     any_async_clk: bool = False  # Whether is there any register with async clock in the interface
     all_async_clk: bool = True  # Whether all registers have async clock in the interface
     async_registers: list = [(int, str)]  # List of all the (index, register) with async clock
@@ -101,6 +102,8 @@ class OtInterfaceBuilder:
         obj["width"] = mem.get_property("memwidth")
         obj["offset"] = mem.address_offset
         obj["size"] = obj["width"] * obj["entries"] // 8
+        self.all_async_clk &= bool(mem.get_property("async_clk", default=False))
+        self.num_windows += 1
         return obj
 
     def get_reg(self, reg: node.RegNode) -> dict:
@@ -188,6 +191,7 @@ class OtInterfaceBuilder:
         Parse an interface and return a dictionary.
         """
         self.num_regs = 0
+        self.num_windows = 0
         self.any_async_clk = False
         self.all_async_clk = True
         self.any_shadowed_reg = False
@@ -221,7 +225,14 @@ class OtInterfaceBuilder:
             )
         interface["addr_width"] = (last_addr - 1).bit_length()
         interface["num_regs"] = self.num_regs
+        interface["num_windows"] = self.num_windows
         interface["async_registers"] = self.async_registers
+        interface["needs_aw"] = (
+            interface["num_regs"] > 0
+            or interface["num_windows"] > 1
+            or interface["windows"][0]["offset"] > 0
+            or interface["windows"][0]["size"] != (1 << interface["addr_width"])
+        )
         return interface
 
     def parse_root(self, root: node.AddrmapNode) -> dict:

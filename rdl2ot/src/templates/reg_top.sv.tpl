@@ -29,11 +29,13 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
 {%- if has_windows %}
 
   // Output port for window
-  output tlul_pkg::tl_h2d_t tl_win_o,
-  input  tlul_pkg::tl_d2h_t tl_win_i,
+  {%- set array = "  [{}]".format(interface.num_windows) if interface.num_windows > 1 %}
+  output tlul_pkg::tl_h2d_t tl_win_o{{ array }},
+  input  tlul_pkg::tl_d2h_t tl_win_i{{ array }},
 {%- endif %}
 
 {%- if has_regs %}
+
   // To HW
   output {{ ip_name|lower }}_reg_pkg::{{ ip_name|lower }}{{interface_name}}_reg2hw_t reg2hw, // Write
   input  {{ ip_name|lower }}_reg_pkg::{{ ip_name|lower }}{{interface_name}}_hw2reg_t hw2reg, // Read
@@ -52,48 +54,13 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
 
   import {{ ip_name|lower }}_reg_pkg::* ;
 
-{%- if has_windows %}
-
-  // Add an unloaded flop to make use of clock / reset
-  // This is done to specifically address lint complaints of unused clocks/resets
-  // Since the flop is unloaded it will be removed during synthesis
-  logic unused_reg;
-  always_ff @(posedge clk_i or negedge rst_ni) begin
-    if (!rst_ni) begin
-      unused_reg <= '0;
-    end else begin
-      unused_reg <= tl_i.a_valid;
-    end
-  end
-
-
-  // Since there are no registers in this block, commands are routed through to windows which
-  // can report their own integrity errors.
-  assign intg_err_o = 1'b0;
-
-  // outgoing integrity generation
-  tlul_pkg::tl_d2h_t tl_o_pre;
-  tlul_rsp_intg_gen #(
-    .EnableRspIntgGen(1),
-    .EnableDataIntgGen(0)
-  ) u_rsp_intg_gen (
-    .tl_i(tl_o_pre),
-    .tl_o(tl_o)
-  );
-
-  assign tl_win_o = tl_i;
-  assign tl_o_pre = tl_win_i;
-
-{%- endif %}
-
-{%- if has_regs %}
+{%- if interface.needs_aw %}
 
   localparam int AW = {{ interface.addr_width }};
-  localparam int DW = 32;
-  localparam int DBW = DW/8;                    // Byte Width
 {%- endif %}
-
-{%- if has_regs %}
+{%- if interface.num_regs > 0 %}
+  localparam int DW = {{ registers[0].width }};
+  localparam int DBW = DW/8;                    // Byte Width
 
   // register signals
   logic           reg_we;
@@ -111,6 +78,43 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
 
   tlul_pkg::tl_h2d_t tl_reg_h2d;
   tlul_pkg::tl_d2h_t tl_reg_d2h;
+{%- endif %}
+
+{%- if interface.num_regs == 0 and interface.num_windows == 1 and not interface.any_async_clk %}
+
+  // Add an unloaded flop to make use of clock / reset
+  // This is done to specifically address lint complaints of unused clocks/resets
+  // Since the flop is unloaded it will be removed during synthesis
+  logic unused_reg;
+  always_ff @(posedge clk_i or negedge rst_ni) begin
+    if (!rst_ni) begin
+      unused_reg <= '0;
+    end else begin
+      unused_reg <= tl_i.a_valid;
+    end
+  end
+{%- endif %}
+
+
+{%- if interface.all_async_clk %}
+  tlul_pkg::tl_h2d_t tl_async_h2d;
+  tlul_pkg::tl_d2h_t tl_async_d2h;
+  tlul_fifo_async #(
+    .ReqDepth(2),
+    .RspDepth(2)
+  ) u_if_sync (
+    .clk_h_i(clk_i),
+    .rst_h_ni(rst_ni),
+    .clk_d_i(clk_i),
+    .rst_d_ni(rst_ni),
+    .tl_h_i(tl_i),
+    .tl_h_o(tl_o),
+    .tl_d_o(tl_o),
+    .tl_d_i(tl_i)
+  );
+{%- endif %}
+
+{%- if interface.num_regs > 0 %}
 
 
   // incoming payload check
@@ -134,8 +138,14 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
   );
 
   logic err_q;
+  {%- if interface.clocks and "clk_lc_i" in interface.clocks %}
+
+  always_ff @(posedge clk_lc_i or negedge rst_lc_ni) begin
+    if (!rst_lc_ni) begin
+  {%- else %}
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (!rst_ni) begin
+  {%- endif %}
       err_q <= '0;
     end else if (intg_err || reg_we_err) begin
       err_q <= 1'b1;
@@ -145,6 +155,11 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
   // integrity error output is permanent and should be used for alert generation
   // register errors are transactional
   assign intg_err_o = err_q | intg_err | reg_we_err;
+{%- else %}
+  // Since there are no registers in this block, commands are routed through to windows which
+  // can report their own integrity errors.
+  assign intg_err_o = 1'b0;
+{%- endif %}
 
   // outgoing integrity generation
   tlul_pkg::tl_d2h_t tl_o_pre;
@@ -156,8 +171,75 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
     .tl_o(tl_o)
   );
 
+{%- set num_dsp = (interface.num_regs > 0)|int + interface.num_windows %}
+{%- if (num_dsp) <= 1 %}
+  {%- if interface.num_windows == 0 %}
   assign tl_reg_h2d = tl_i;
   assign tl_o_pre   = tl_reg_d2h;
+  {%- else %}
+  assign tl_win_o = tl_i;
+  assign tl_o_pre = tl_win_i;
+  {%- endif %}
+{%- else %}
+
+  tlul_pkg::tl_h2d_t tl_socket_h2d [{{ num_dsp }}];
+  tlul_pkg::tl_d2h_t tl_socket_d2h [{{ num_dsp }}];
+
+  logic [{{ interface.num_windows.bit_length() - 1}}:0] reg_steer;
+
+  // socket_1n connection
+  {%- if interface.num_regs > 0 %}
+  assign tl_reg_h2d = tl_socket_h2d[{{ interface.num_windows }}];
+  assign tl_socket_d2h[{{ interface.num_windows }}] = tl_reg_d2h;
+
+  {%- endif %}
+
+  {%- for win in windows %}
+    {%- set win_suff = "[{}]".format(loop.index0) if interface.num_windows > 1 %}
+
+  assign tl_win_o{{ win_suff }} = tl_socket_h2d[{{ loop.index0 }}];
+  assign tl_socket_d2h[{{ loop.index0 }}] = tl_win_i{{ win_suff }};
+  {%- endfor %}
+
+  // Create Socket_1n
+  tlul_socket_1n #(
+    .N            ({{ num_dsp }}),
+    .HReqPass     (1'b1),
+    .HRspPass     (1'b1),
+    .DReqPass     ({ {{- num_dsp -}} {1'b1} }),
+    .DRspPass     ({ {{- num_dsp -}} {1'b1} }),
+    .HReqDepth    (4'h0),
+    .HRspDepth    (4'h0),
+    .DReqDepth    ({ {{-  num_dsp -}} {4'h0} }),
+    .DRspDepth    ({ {{- num_dsp -}} {4'h0} }),
+    .ExplicitErrs (1'b0)
+  ) u_socket (
+    .clk_i  (clk_i),
+    .rst_ni (rst_ni),
+    .tl_h_i (tl_i),
+    .tl_h_o (tl_o_pre),
+    .tl_d_o (tl_socket_h2d),
+    .tl_d_i (tl_socket_d2h),
+    .dev_select_i (reg_steer)
+  );
+
+  // Create steering logic
+  always_comb begin
+    reg_steer =
+  {%- for win in windows %}
+        tl_i.a_address[AW-1:0] inside { {{- "[{}:{}]".format(win.offset, win.offset + win.size - 1 ) -}} } ? {{  interface.num_windows.bit_length() }}'d{{ loop.index0 }} :
+  {%- endfor %}
+        // Default set to register
+        {{ interface.num_windows.bit_length() }}'d{{ num_dsp - 1 }};
+
+    // Override this in case of an integrity error
+    if (intg_err) begin
+      reg_steer = {{ interface.num_windows.bit_length() }}'d{{ num_dsp - 1 }};
+    end
+  end
+{%- endif %}
+
+{%- if has_regs %}
 
   tlul_adapter_reg #(
     .RegAw(AW),

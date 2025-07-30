@@ -11,6 +11,7 @@ module uart_reg_top (
   input rst_ni,
   input  tlul_pkg::tl_h2d_t tl_i,
   output tlul_pkg::tl_d2h_t tl_o,
+
   // To HW
   output uart_reg_pkg::uart_reg2hw_t reg2hw, // Write
   input  uart_reg_pkg::uart_hw2reg_t hw2reg, // Read
@@ -85,7 +86,6 @@ module uart_reg_top (
     .tl_i(tl_o_pre),
     .tl_o(tl_o)
   );
-
   assign tl_reg_h2d = tl_i;
   assign tl_o_pre   = tl_reg_d2h;
 

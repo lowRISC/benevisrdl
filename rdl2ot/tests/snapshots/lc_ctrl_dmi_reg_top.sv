@@ -33,8 +33,6 @@ module lc_ctrl_dmi_reg_top (
       unused_reg <= tl_i.a_valid;
     end
   end
-
-
   // Since there are no registers in this block, commands are routed through to windows which
   // can report their own integrity errors.
   assign intg_err_o = 1'b0;
@@ -43,12 +41,11 @@ module lc_ctrl_dmi_reg_top (
   tlul_pkg::tl_d2h_t tl_o_pre;
   tlul_rsp_intg_gen #(
     .EnableRspIntgGen(1),
-    .EnableDataIntgGen(0)
+    .EnableDataIntgGen(1)
   ) u_rsp_intg_gen (
     .tl_i(tl_o_pre),
     .tl_o(tl_o)
   );
-
   assign tl_win_o = tl_i;
   assign tl_o_pre = tl_win_i;
 
