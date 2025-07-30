@@ -259,7 +259,7 @@ class OtInterfaceBuilder:
             if isinstance(child, node.AddrmapNode):
                 child_obj = self.get_interface(child, DEFAULT_INTERFACE_NAME)
                 obj["interfaces"].append(child_obj)
-            elif isinstance(child, node.RegNode):
+            elif isinstance(child, node.RegNode|node.MemNode):
                 continue
             else:
                 print(
