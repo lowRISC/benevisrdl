@@ -62,6 +62,7 @@ class OtInterfaceBuilder:
         obj = dict()
         obj["name"] = field.inst_name
         obj["type"] = "field"
+        obj["desc"] = field.get_property("desc", default="")
         obj["parent_name"] = field.parent.inst_name
         obj["lsb"] = field.lsb
         obj["msb"] = field.msb
@@ -162,6 +163,7 @@ class OtInterfaceBuilder:
         obj["needs_int_qe"] = opentitan.needs_int_qe(obj)
         obj["fields_no_write_en"] = opentitan.fields_no_write_en(obj)
         obj["is_multifields"] = len(obj["fields"]) > 1
+        obj["is_homogeneous"] = opentitan.is_homogeneous(obj)
 
         self.any_async_clk |= bool(obj["async_clk"])
         self.all_async_clk &= bool(obj["async_clk"])
@@ -259,7 +261,7 @@ class OtInterfaceBuilder:
             if isinstance(child, node.AddrmapNode):
                 child_obj = self.get_interface(child, DEFAULT_INTERFACE_NAME)
                 obj["interfaces"].append(child_obj)
-            elif isinstance(child, node.RegNode|node.MemNode):
+            elif isinstance(child, node.RegNode | node.MemNode):
                 continue
             else:
                 print(

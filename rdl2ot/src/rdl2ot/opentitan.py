@@ -4,6 +4,7 @@
 
 from systemrdl.rdltypes import OnReadType, OnWriteType, AccessType
 from systemrdl import node
+import re
 
 
 def register_permit_mask(reg: dict) -> int:
@@ -111,3 +112,15 @@ def needs_we(field: dict) -> bool:
     prim_subreg's we port).
     """
     return field["reggen_sw_access"] != "RC" and field["sw_writable"]
+
+
+def is_homogeneous(reg: dict) -> bool:
+    """Return true if all fields of a register are equal. The offset are excluded from
+    the comparison.
+    """
+    exclude = ["name", "msb", "lsb", "bitmask", "type"]
+    unamed_fields = [
+        {key: value for key, value in f.items() if key not in exclude} for f in reg["fields"]
+    ]
+    names = {re.sub(r"_\d+$", "", f["name"]) for f in reg["fields"]}
+    return all(f == unamed_fields[0] for f in unamed_fields[1:]) and len(names) == 1

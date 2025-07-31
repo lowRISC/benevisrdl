@@ -38,25 +38,24 @@ package {{ ip_name }}_reg_pkg;
   // Typedefs for registers for {{ interface.name|lower }} interface //
   ///////////////////////////////////////////////
     {%- for reg in registers -%}
-      {%- set indent = "  " if reg.is_multifields %}
       {%- if reg.hw_readable %}
+        {%- set fields = reg.fields[0:1] if reg.is_homogeneous else reg.fields  %}
+        {%- set indent = "  " if fields|length > 1 %}
 
   typedef struct packed {
-        {%- for field in reg.fields|reverse  %}
-          {%- if reg.is_multifields and field.hw_readable %}
+        {%- for field in fields|reverse if field.hw_readable %}
+          {%- if fields|length > 1 %}
     struct packed {
           {%- endif %}
-          {%- if field.hw_readable %}
-            {%- set bits = "[{}:0]".format(field.width - 1) if field.width > 1 else " " %}
+          {%- set bits = "[{}:0]".format(field.width - 1) if field.width > 1 else " " %}
     {{ indent }}logic {{ "{:<6}".format(bits) }} q;
-          {%- endif %}
           {%- if field.swmod %}
     {{ indent }}logic        qe;
           {%- endif %}
           {%- if reg.hwre or (reg.shadowed and reg.external) %}
     {{ indent }}logic        re;
           {%- endif %}
-          {%- if reg.is_multifields and field.hw_readable %}
+          {%- if fields|length > 1 %}
     } {{ field.name|lower }};
           {%- endif %}
         {%- endfor %}
@@ -67,13 +66,14 @@ package {{ ip_name }}_reg_pkg;
 
   {%- if registers|length > 0 %}
     {%- for reg in registers  %}
-      {%- set indent = "  " if reg.is_multifields %}
       {%- if reg.hw_writable %}
+        {%- set fields = reg.fields[0:1] if reg.is_homogeneous else reg.fields  %}
+        {%- set indent = "  " if fields|length > 1 %}
 
   typedef struct packed {
-        {%- for field in reg.fields|reverse  %}
+        {%- for field in fields|reverse  %}
           {%- if field.hw_writable %}
-            {%- if reg.is_multifields %}
+            {%- if fields|length > 1 %}
     struct packed {
             {%- endif %}
             {%- set bits = "[{}:0]".format(field.width - 1) if field.width > 1 else " " %}
@@ -81,7 +81,7 @@ package {{ ip_name }}_reg_pkg;
             {%- if not reg.external %}
     {{ indent }}logic {{ "{:<6}".format("") }} de;
             {%- endif %}
-            {%- if reg.is_multifields %}
+            {%- if fields|length > 1 %}
     } {{ field.name|lower }};
             {%- endif %}
           {%- endif %}
