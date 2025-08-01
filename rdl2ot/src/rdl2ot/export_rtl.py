@@ -235,6 +235,12 @@ class OtInterfaceBuilder:
             or interface["windows"][0]["offset"] > 0
             or interface["windows"][0]["size"] != (1 << interface["addr_width"])
         )
+        interface["any_async_clk"] = self.any_async_clk
+        interface["all_async_clk"] = self.all_async_clk
+        interface["any_shadowed_reg"] = self.any_shadowed_reg
+        interface["any_integrity_bypass"] = any(
+            [win["integrity_bypass"] for win in interface["windows"]]
+        )
         return interface
 
     def parse_root(self, root: node.AddrmapNode) -> dict:
@@ -274,11 +280,4 @@ class OtInterfaceBuilder:
             interface = self.get_interface(root)
             obj["interfaces"].append(interface)
 
-        for interface in obj["interfaces"]:
-            interface["any_async_clk"] = self.any_async_clk
-            interface["all_async_clk"] = self.all_async_clk
-            interface["any_shadowed_reg"] = self.any_shadowed_reg
-            interface["any_integrity_bypass"] = any(
-                [win["integrity_bypass"] for win in interface["windows"]]
-            )
         return obj

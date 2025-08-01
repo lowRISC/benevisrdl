@@ -229,7 +229,7 @@ module lc_ctrl_regs_reg_top (
   // R[alert_test]: V(True)
   logic alert_test_qe;
   logic [2:0] alert_test_flds_we;
-  assign alert_test_qe = &alert_test_flds_we;
+  assign alert_test_qe = &(alert_test_flds_we);
   //   F[fatal_prog_error]: 0:0
   prim_subreg_ext #(
     .DW      (1)
@@ -484,7 +484,7 @@ module lc_ctrl_regs_reg_top (
   // R[claim_transition_if]: V(True)
   logic claim_transition_if_qe;
   logic [0:0] claim_transition_if_flds_we;
-  assign claim_transition_if_qe = &claim_transition_if_flds_we;
+  assign claim_transition_if_qe = &(claim_transition_if_flds_we);
   // Create REGWEN-gated WE signal
   logic claim_transition_if_gated_we;
   assign claim_transition_if_gated_we = claim_transition_if_we & claim_transition_if_regwen_qs;
@@ -523,7 +523,7 @@ module lc_ctrl_regs_reg_top (
   // R[transition_cmd]: V(True)
   logic transition_cmd_qe;
   logic [0:0] transition_cmd_flds_we;
-  assign transition_cmd_qe = &transition_cmd_flds_we;
+  assign transition_cmd_qe = &(transition_cmd_flds_we);
   // Create REGWEN-gated WE signal
   logic transition_cmd_gated_we;
   assign transition_cmd_gated_we = transition_cmd_we & transition_regwen_qs;
@@ -546,7 +546,7 @@ module lc_ctrl_regs_reg_top (
   // R[transition_ctrl]: V(True)
   logic transition_ctrl_qe;
   logic [1:0] transition_ctrl_flds_we;
-  assign transition_ctrl_qe = &transition_ctrl_flds_we;
+  assign transition_ctrl_qe = &(transition_ctrl_flds_we);
   // Create REGWEN-gated WE signal
   logic transition_ctrl_gated_we;
   assign transition_ctrl_gated_we = transition_ctrl_we & transition_regwen_qs;
@@ -587,7 +587,7 @@ module lc_ctrl_regs_reg_top (
   // R[transition_token_0]: V(True)
   logic transition_token_0_qe;
   logic [0:0] transition_token_0_flds_we;
-  assign transition_token_0_qe = &transition_token_0_flds_we;
+  assign transition_token_0_qe = &(transition_token_0_flds_we);
   // Create REGWEN-gated WE signal
   logic transition_token_0_gated_we;
   assign transition_token_0_gated_we = transition_token_0_we & transition_regwen_qs;
@@ -610,7 +610,7 @@ module lc_ctrl_regs_reg_top (
   // R[transition_token_1]: V(True)
   logic transition_token_1_qe;
   logic [0:0] transition_token_1_flds_we;
-  assign transition_token_1_qe = &transition_token_1_flds_we;
+  assign transition_token_1_qe = &(transition_token_1_flds_we);
   // Create REGWEN-gated WE signal
   logic transition_token_1_gated_we;
   assign transition_token_1_gated_we = transition_token_1_we & transition_regwen_qs;
@@ -633,7 +633,7 @@ module lc_ctrl_regs_reg_top (
   // R[transition_token_2]: V(True)
   logic transition_token_2_qe;
   logic [0:0] transition_token_2_flds_we;
-  assign transition_token_2_qe = &transition_token_2_flds_we;
+  assign transition_token_2_qe = &(transition_token_2_flds_we);
   // Create REGWEN-gated WE signal
   logic transition_token_2_gated_we;
   assign transition_token_2_gated_we = transition_token_2_we & transition_regwen_qs;
@@ -656,7 +656,7 @@ module lc_ctrl_regs_reg_top (
   // R[transition_token_3]: V(True)
   logic transition_token_3_qe;
   logic [0:0] transition_token_3_flds_we;
-  assign transition_token_3_qe = &transition_token_3_flds_we;
+  assign transition_token_3_qe = &(transition_token_3_flds_we);
   // Create REGWEN-gated WE signal
   logic transition_token_3_gated_we;
   assign transition_token_3_gated_we = transition_token_3_we & transition_regwen_qs;
@@ -679,7 +679,7 @@ module lc_ctrl_regs_reg_top (
   // R[transition_target]: V(True)
   logic transition_target_qe;
   logic [0:0] transition_target_flds_we;
-  assign transition_target_qe = &transition_target_flds_we;
+  assign transition_target_qe = &(transition_target_flds_we);
   // Create REGWEN-gated WE signal
   logic transition_target_gated_we;
   assign transition_target_gated_we = transition_target_we & transition_regwen_qs;
@@ -702,7 +702,7 @@ module lc_ctrl_regs_reg_top (
   // R[otp_vendor_test_ctrl]: V(True)
   logic otp_vendor_test_ctrl_qe;
   logic [0:0] otp_vendor_test_ctrl_flds_we;
-  assign otp_vendor_test_ctrl_qe = &otp_vendor_test_ctrl_flds_we;
+  assign otp_vendor_test_ctrl_qe = &(otp_vendor_test_ctrl_flds_we);
   // Create REGWEN-gated WE signal
   logic otp_vendor_test_ctrl_gated_we;
   assign otp_vendor_test_ctrl_gated_we = otp_vendor_test_ctrl_we & transition_regwen_qs;
