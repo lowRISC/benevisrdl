@@ -277,30 +277,30 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
 {%- for reg in registers  %}
   {%- for offset in reg.offsets %}
     {%- set multireg_idx = loop.index0 %}
-    {%- set index = ('_' ~ multireg_idx|string) if reg.is_multireg %}
+    {%- set reg_suffix = ('_' ~ multireg_idx|string) if reg.offsets|length > 1 %}
     {%- if reg.needs_read_en %}
-  logic {{ reg.name|lower }}{{ index }}_re;
+  logic {{ reg.name|lower }}{{ reg_suffix }}_re;
     {%- endif %}
     {%- if reg.needs_write_en %}
-  logic {{ reg.name|lower }}{{ index }}_we;
+  logic {{ reg.name|lower }}{{ reg_suffix }}_we;
     {%- endif %}
     {%- for field in reg.fields %}
-      {%- set field_name = ('_' ~ field.name|lower) if reg.is_multifields %}
+      {%- set field_name = ('_' ~ field.name|lower ~ reg_suffix) if reg.is_multifields %}
       {%- set width = "[{}:0] ".format(field.width - 1) if field.width > 1 %}
       {%- if not reg.async_clk and field.sw_readable %} 
-  logic {{ width ~ reg.name|lower ~ index ~ field_name }}_qs;
+  logic {{ width ~ reg.name|lower ~ reg_suffix ~ field_name }}_qs;
       {%- endif %}
       {%- if not reg.async_clk and field.sw_writable %} 
-  logic {{ width ~ reg.name|lower ~ index ~ field_name }}_wd;
+  logic {{ width ~ reg.name|lower ~ reg_suffix ~ field_name }}_wd;
       {%- endif %}
       {%- if reg.shadowed and not reg.external %}
-  logic {{ reg.name|lower ~ index ~ field_name }}_storage_err;
-  logic {{ reg.name|lower ~ index ~ field_name }}_update_err;
+  logic {{ reg.name|lower ~ reg_suffix ~ field_name }}_storage_err;
+  logic {{ reg.name|lower ~ reg_suffix ~ field_name }}_update_err;
       {%- endif %}
     {%- endfor %}
     {%- if reg.async_clk %} 
-  logic [{{ reg.msb }}:0] {{reg.name|lower ~ index }}_qs;
-  logic {{ reg.name|lower ~ index }}_busy;
+  logic [{{ reg.msb }}:0] {{reg.name|lower ~ reg_suffix }}_qs;
+  logic {{ reg.name|lower ~ reg_suffix }}_busy;
     {%- endif %}
   {%- endfor %}
 {%- endfor %}
@@ -315,7 +315,7 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
       {%- for offset in reg.offsets %}
 
         {%- set multireg_idx = loop.index0 %}
-        {%- set index = ('_' ~ multireg_idx|string) if reg.is_multireg %}
+        {%- set index = ('_' ~ multireg_idx|string) if reg.offsets|length > 1 %}
         {%- set sig_name = (clk_name ~ reg.name ~ index)|lower %}
 
         {%- set src_we_expr = "{}_we".format(reg.name|lower ~ index) if reg.needs_write_en else "'0" %}
@@ -421,7 +421,7 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
 {%- for reg in registers  %}
   {%- for offset in reg.offsets %}
     {%- set multireg_idx = loop.index0 if reg.is_multireg %}
-    {%- set multireg_suffix = "_{}".format(multireg_idx) if reg.is_multireg %}
+    {%- set multireg_suffix = "_{}".format(multireg_idx) if reg.offsets|length > 1 %}
     {%- set regname = reg.name|lower ~ multireg_suffix %}
     {%- set clk_prefix = clk_name if reg.async_clk %}
     {%- if reg.is_multireg %}
@@ -442,7 +442,7 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
   prim_flop #(
     .Width(1),
     .ResetValue(0)
-  ) u_{{ reg.name|lower ~ multireg_idx }}_qe (
+  ) u_{{ reg.name|lower ~ loop.index0}}_qe (
     .clk_i(clk_i),
     .rst_ni(rst_ni),
     .d_i(&({{ regname }}_flds_we {{"| {}'h{:x}".format(reg.fields|length, reg.fields_no_write_en) if reg.fields_no_write_en }})),
@@ -470,7 +470,7 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
     {%- endif %}
     {%- for field in reg.fields  %}
       {%- set field_name = "_{}{}".format(field.name, multireg_suffix)|lower if reg.is_multifields %}
-      {%- set property = ".{}".format(field.name)|lower if reg.is_multifields %}
+      {%- set property = ".{}".format(field.name)|lower if reg.is_multifields and not reg.is_homogeneous %}
       {%- set bit_index = "[{}:{}]".format(field.msb, field.lsb) if field.msb != field.lsb else "[{}]".format(field.msb) %}
       {%- if reg.is_multifields %}
   //   F{{ '[{}{}]: {}:{}'.format(field.name, multireg_suffix, field.msb, field.lsb)|lower }}
@@ -492,10 +492,11 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
       {%- endif %}
       {%- endif %}
 {{- space }}
-    {%- set sig_name = (reg.name ~ ("[{}]".format(multireg_idx) if reg.is_multireg) ~ property)|lower -%}
+    {%- set idx = loop.index0 if reg.is_homogeneous and reg.is_multifields else multireg_idx %}
+    {%- set sig_name = (reg.name ~ ("[{}]".format(idx) if reg.is_multireg) ~ property)|lower -%}
     {%- set suffix = "_int" if reg.async_clk %}
       {%- if reg.external or reg.shadowed %}
-    .re     ({{ "{}{}{}_re".format(clk_prefix, reg.name, multireg_suffix)|lower if reg.sw_readable or reg.shadowed else "1'b0" }}),
+    .re     ({{ "{}{}{}_re".format(clk_prefix, reg.name, multireg_suffix)|lower if field.sw_readable or reg.shadowed else "1'b0" }}),
       {%- endif %}
     .we     ({{ "{}{}_we".format(clk_prefix ~ regname, ("_gated" if field.sw_write_en)) if field.sw_writable else "1'b0"  }}),
     .wd     ({{ "{}{}{}_wd{}{}".format(clk_prefix, regname, field_name if not reg.async_clk, "ata" if reg.async_clk, bit_index if reg.async_clk) if field.sw_writable else "'0"  }}),
@@ -573,8 +574,8 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
   {%- set ns = namespace(re_index=0) -%}
   {%- for reg in registers  %}
     {%- for offset in reg.offsets %}
-      {%- set multireg_index = ('_' ~ loop.index0|string) if reg.offsets|length > 1 %}
-      {%- set regname = "{}{}".format(reg.name, multireg_index)|lower %}
+      {%- set reg_suffix = ('_' ~ loop.index0|string) if reg.offsets|length > 1 %}
+      {%- set regname = "{}{}".format(reg.name, reg_suffix)|lower %}
       {%- if reg.needs_read_en %}
   assign {{ regname }}_re = addr_hit[{{ ns.re_index }}] & reg_re & !reg_error;
       {%- endif %}
@@ -598,8 +599,8 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
   {%- set ns = namespace(counter=0) %}
   {%- for reg in registers %}
     {%- for offset in reg.offsets %}
-      {%- set multireg_index = ('_' ~ loop.index0|string) if reg.offsets|length > 1 %}
-      {%- set expr = "{}{}{}_we".format(reg.name, multireg_index, "_gated" if not reg.async and reg.sw_write_en)|lower if reg.needs_write_en else "1'b0" %}
+      {%- set reg_suffix = ('_' ~ loop.index0|string) if reg.offsets|length > 1 %}
+      {%- set expr = "{}{}{}_we".format(reg.name, reg_suffix, "_gated" if not reg.async and reg.sw_write_en)|lower if reg.needs_write_en else "1'b0" %}
     reg_we_check[{{ ns.counter }}] = {{ expr }};
       {%- set ns.counter = ns.counter + 1 %}
     {%- endfor %}
@@ -613,16 +614,16 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
   {%- set ns = namespace(counter=0) %}
   {%- for reg in registers %}
     {%- for offset in reg.offsets %}
-      {%- set multireg_index = ('_' ~ loop.index0|string) if reg.is_multireg %}
+      {%- set reg_suffix = ('_' ~ loop.index0|string) if reg.is_multireg and not (reg.is_homogeneous and reg.is_multifields)  %}
       addr_hit[{{ ns.counter }}]: begin
       {%- set ns.counter = ns.counter + 1 %}
       {%- if reg.async_clk %}
-        reg_rdata_next = DW'({{ "{}{}_qs".format(reg.name, multireg_index)|lower }});
+        reg_rdata_next = DW'({{ "{}{}_qs".format(reg.name, reg_suffix)|lower }});
       {%- else %}
         {%- for field in reg.fields %}
-            {%- set field_name = ('_' ~ field.name|lower) if reg.is_multifields %}
+            {%- set field_name = ('_' ~ field.name|lower ~ reg_suffix) if reg.is_multifields %}
             {%- set index = "{}:{}".format(field.msb, field.lsb) if field.width > 1 else field.msb %}
-            {%- set expr = "{}{}{}_qs".format(reg.name, field_name, multireg_index)|lower if field.sw_readable else "'0" %}
+            {%- set expr = "{}{}{}_qs".format(reg.name, reg_suffix, field_name)|lower if field.sw_readable else "'0" %}
         reg_rdata_next{{ "[{}] = {}".format(index, expr)|lower }};
         {%- endfor %}
       {%- endif %}

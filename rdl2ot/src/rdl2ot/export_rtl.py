@@ -169,13 +169,12 @@ class OtInterfaceBuilder:
         self.all_async_clk &= bool(obj["async_clk"])
         self.any_shadowed_reg |= bool(obj["shadowed"])
 
+        array_size = len(obj["offsets"])
         if bool(obj["async_clk"]):
-            array_size = len(obj["offsets"])
             for index in range(0, array_size):
                 reg_name = reg.inst_name + (f"_{index}" if array_size > 1 else "")
                 self.async_registers.append((self.reg_index + index, reg_name))
-            self.reg_index += array_size - 1
-        self.reg_index += 1
+        self.reg_index += array_size
         return obj
 
     def get_paramesters(self, obj: node.AddrmapNode | node.RegfileNode) -> [dict]:
