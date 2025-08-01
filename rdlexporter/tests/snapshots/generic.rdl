@@ -3,6 +3,13 @@ addrmap generic #(
 ){
     reg {
         field {
+            desc = "Enable the ip";
+            sw = rw;
+        } EN[0:0];
+    } CTRL_WEN @ 0x0;
+
+    reg {
+        field {
             reset = 0x0;
             swmod = true;
             desc = "Enable the ip";
@@ -16,6 +23,7 @@ addrmap generic #(
             onwrite = woset;
             hw = rw;
         } MODE[9:2];
-    } CTRL[4] @ 0x0;
+    } CTRL[4] @ 0x4;
+    CTRL.MODE -> swwe = CTRL_WEN.EN;
 
 };

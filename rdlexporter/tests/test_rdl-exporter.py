@@ -9,6 +9,7 @@ from systemrdl import rdltypes
 from systemrdl.core.parameter import Parameter
 from systemrdl.messages import FileSourceRef
 from systemrdl.rdltypes import AccessType, OnReadType, OnWriteType
+from systemrdl.ast.references import InstRef
 from rdlexporter import RdlExporter
 
 SNAPSHOTS_DIR = Path(__file__).parent / "snapshots"
@@ -58,6 +59,18 @@ def test_importer(tmp_path: Path):
     imp = RDLImporter(rdlc)
     imp.default_src_ref = FileSourceRef(tmp_path)
 
+    addrmap = imp.create_addrmap_definition("generic")
+
+    field_wen = imp.create_field_definition("EN")
+    field_wen = imp.instantiate_field(field_wen, "EN", 0, 1)
+    imp.assign_property(field_wen, "desc", "Enable the ip")
+    imp.assign_property(field_wen, "sw", AccessType.rw)
+
+    regwen = imp.create_reg_definition("CTRL_WEN")
+    imp.add_child(regwen, field_wen)
+    regwen = imp.instantiate_reg(regwen, "CTRL_WEN", 0x00)
+    imp.add_child(addrmap, regwen)
+
     field_en = imp.create_field_definition("EN")
     field_en = imp.instantiate_field(field_en, "EN", 0, 1)
     imp.assign_property(field_en, "reset", 0x00)
@@ -73,20 +86,28 @@ def test_importer(tmp_path: Path):
     imp.assign_property(field_mode, "onread", OnReadType.rclr)
     imp.assign_property(field_mode, "onwrite", OnWriteType.woset)
     imp.assign_property(field_mode, "hw", AccessType.rw)
+    imp.assign_property(
+        field_mode,
+        "swwe",
+        InstRef(
+            imp.compiler.env,
+            addrmap,
+            [(regwen.inst_name, [], None), (field_wen.inst_name, [], None)],
+        ),
+    )
 
     reg = imp.create_reg_definition("CTRL")
     imp.add_child(reg, field_en)
     imp.add_child(reg, field_mode)
 
-    reg = imp.instantiate_reg(reg, "CTRL", 0x00, [4], 0x04)
-    addrmap = imp.create_addrmap_definition("generic")
+    reg = imp.instantiate_reg(reg, "CTRL", 0x04, [4], 0x04)
+    imp.add_child(addrmap, reg)
 
     value = 0x56
     param = Parameter(rdltypes.get_rdltype(value), "Width")
     param._value = value
     addrmap.parameters.append(param)
 
-    imp.add_child(addrmap, reg)
     imp.register_root_component(addrmap)
 
     RdlExporter(rdlc).export(output_file)
