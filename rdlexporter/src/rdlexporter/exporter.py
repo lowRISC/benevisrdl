@@ -56,7 +56,7 @@ class RdlExporter:
 
     def _emit_dynamic_assignment(self) -> None:
         # Nothing to be emited
-        current_scope = self.ast_path[-1]
+        current_scope = self.ast_path[-1].lower()
         if current_scope not in self.dynamic_assignment:
             return
         for scope in self.dynamic_assignment.pop(current_scope):
@@ -92,8 +92,8 @@ class RdlExporter:
             elif isinstance(obj, InstRef):
                 # This should be emited at a higher scope indicated by `ref_root._scope_name`.
                 ref = obj.get_value()
-                scope = ref.ref_root._scope_name
-                self.dynamic_assignment.setdefault(scope, []).append(
+                scope = ref.ref_root._scope_name or ref.ref_root.type_name
+                self.dynamic_assignment.setdefault(scope.lower(), []).append(
                     {
                         "property": name,
                         "ast_path": self.ast_path.copy(),
