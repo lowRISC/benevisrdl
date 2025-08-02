@@ -287,7 +287,12 @@ addrmap lc_ctrl #(
             mementries = 0x400;
             sw = rw;
             memwidth = 0x20;
-        } dmi;
+        } dmi @ 0x70;
+
+        external mem {
+            mementries = 0x10;
+            memwidth = 0x20;
+        } skipto;
 
     } dmi;
 

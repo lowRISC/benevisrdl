@@ -10,6 +10,7 @@
 {%- set has_windows = windows|length > 0 %}
 {%- set has_regs = registers|length > 0 %}
 {%- set interface_name = ("_" + interface.name|lower) if interface.name %}
+{%- set num_regs_digits = interface.num_regs | string | length %}
 {%- set clk_name = "aon_" %}
 
 module {{ ip_name|lower }}{{interface_name}}_reg_top (
@@ -28,11 +29,13 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
 {%- if has_windows %}
 
   // Output port for window
-  output tlul_pkg::tl_h2d_t tl_win_o,
-  input  tlul_pkg::tl_d2h_t tl_win_i,
+  {%- set array = "  [{}]".format(interface.num_windows) if interface.num_windows > 1 %}
+  output tlul_pkg::tl_h2d_t tl_win_o{{ array }},
+  input  tlul_pkg::tl_d2h_t tl_win_i{{ array }},
 {%- endif %}
 
 {%- if has_regs %}
+
   // To HW
   output {{ ip_name|lower }}_reg_pkg::{{ ip_name|lower }}{{interface_name}}_reg2hw_t reg2hw, // Write
   input  {{ ip_name|lower }}_reg_pkg::{{ ip_name|lower }}{{interface_name}}_hw2reg_t hw2reg, // Read
@@ -51,48 +54,13 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
 
   import {{ ip_name|lower }}_reg_pkg::* ;
 
-{%- if has_windows %}
-
-  // Add an unloaded flop to make use of clock / reset
-  // This is done to specifically address lint complaints of unused clocks/resets
-  // Since the flop is unloaded it will be removed during synthesis
-  logic unused_reg;
-  always_ff @(posedge clk_i or negedge rst_ni) begin
-    if (!rst_ni) begin
-      unused_reg <= '0;
-    end else begin
-      unused_reg <= tl_i.a_valid;
-    end
-  end
-
-
-  // Since there are no registers in this block, commands are routed through to windows which
-  // can report their own integrity errors.
-  assign intg_err_o = 1'b0;
-
-  // outgoing integrity generation
-  tlul_pkg::tl_d2h_t tl_o_pre;
-  tlul_rsp_intg_gen #(
-    .EnableRspIntgGen(1),
-    .EnableDataIntgGen(0)
-  ) u_rsp_intg_gen (
-    .tl_i(tl_o_pre),
-    .tl_o(tl_o)
-  );
-
-  assign tl_win_o = tl_i;
-  assign tl_o_pre = tl_win_i;
-
-{%- endif %}
-
-{%- if has_regs %}
+{%- if interface.needs_aw %}
 
   localparam int AW = {{ interface.addr_width }};
-  localparam int DW = 32;
-  localparam int DBW = DW/8;                    // Byte Width
 {%- endif %}
-
-{%- if has_regs %}
+{%- if interface.num_regs > 0 %}
+  localparam int DW = {{ registers[0].width }};
+  localparam int DBW = DW/8;                    // Byte Width
 
   // register signals
   logic           reg_we;
@@ -110,6 +78,43 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
 
   tlul_pkg::tl_h2d_t tl_reg_h2d;
   tlul_pkg::tl_d2h_t tl_reg_d2h;
+{%- endif %}
+
+{%- if interface.num_regs == 0 and interface.num_windows == 1 and not interface.any_async_clk %}
+
+  // Add an unloaded flop to make use of clock / reset
+  // This is done to specifically address lint complaints of unused clocks/resets
+  // Since the flop is unloaded it will be removed during synthesis
+  logic unused_reg;
+  always_ff @(posedge clk_i or negedge rst_ni) begin
+    if (!rst_ni) begin
+      unused_reg <= '0;
+    end else begin
+      unused_reg <= tl_i.a_valid;
+    end
+  end
+{%- endif %}
+
+
+{%- if interface.all_async_clk %}
+  tlul_pkg::tl_h2d_t tl_async_h2d;
+  tlul_pkg::tl_d2h_t tl_async_d2h;
+  tlul_fifo_async #(
+    .ReqDepth(2),
+    .RspDepth(2)
+  ) u_if_sync (
+    .clk_h_i(clk_i),
+    .rst_h_ni(rst_ni),
+    .clk_d_i(clk_i),
+    .rst_d_ni(rst_ni),
+    .tl_h_i(tl_i),
+    .tl_h_o(tl_o),
+    .tl_d_o(tl_o),
+    .tl_d_i(tl_i)
+  );
+{%- endif %}
+
+{%- if interface.num_regs > 0 %}
 
 
   // incoming payload check
@@ -133,8 +138,14 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
   );
 
   logic err_q;
+  {%- if interface.clocks and "clk_lc_i" in interface.clocks %}
+
+  always_ff @(posedge clk_lc_i or negedge rst_lc_ni) begin
+    if (!rst_lc_ni) begin
+  {%- else %}
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (!rst_ni) begin
+  {%- endif %}
       err_q <= '0;
     end else if (intg_err || reg_we_err) begin
       err_q <= 1'b1;
@@ -144,24 +155,96 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
   // integrity error output is permanent and should be used for alert generation
   // register errors are transactional
   assign intg_err_o = err_q | intg_err | reg_we_err;
+{%- else %}
+  // Since there are no registers in this block, commands are routed through to windows which
+  // can report their own integrity errors.
+  assign intg_err_o = 1'b0;
+{%- endif %}
 
   // outgoing integrity generation
   tlul_pkg::tl_d2h_t tl_o_pre;
   tlul_rsp_intg_gen #(
     .EnableRspIntgGen(1),
-    .EnableDataIntgGen(1)
+    .EnableDataIntgGen({{ (not interface.any_integrity_bypass)|int }})
   ) u_rsp_intg_gen (
     .tl_i(tl_o_pre),
     .tl_o(tl_o)
   );
 
+{%- set num_dsp = (interface.num_regs > 0)|int + interface.num_windows %}
+{%- if (num_dsp) <= 1 %}
+  {%- if interface.num_windows == 0 %}
   assign tl_reg_h2d = tl_i;
   assign tl_o_pre   = tl_reg_d2h;
+  {%- else %}
+  assign tl_win_o = tl_i;
+  assign tl_o_pre = tl_win_i;
+  {%- endif %}
+{%- else %}
+
+  tlul_pkg::tl_h2d_t tl_socket_h2d [{{ num_dsp }}];
+  tlul_pkg::tl_d2h_t tl_socket_d2h [{{ num_dsp }}];
+
+  logic [{{ interface.num_windows.bit_length() - 1}}:0] reg_steer;
+
+  // socket_1n connection
+  {%- if interface.num_regs > 0 %}
+  assign tl_reg_h2d = tl_socket_h2d[{{ interface.num_windows }}];
+  assign tl_socket_d2h[{{ interface.num_windows }}] = tl_reg_d2h;
+
+  {%- endif %}
+
+  {%- for win in windows %}
+    {%- set win_suff = "[{}]".format(loop.index0) if interface.num_windows > 1 %}
+
+  assign tl_win_o{{ win_suff }} = tl_socket_h2d[{{ loop.index0 }}];
+  assign tl_socket_d2h[{{ loop.index0 }}] = tl_win_i{{ win_suff }};
+  {%- endfor %}
+
+  // Create Socket_1n
+  tlul_socket_1n #(
+    .N            ({{ num_dsp }}),
+    .HReqPass     (1'b1),
+    .HRspPass     (1'b1),
+    .DReqPass     ({ {{- num_dsp -}} {1'b1} }),
+    .DRspPass     ({ {{- num_dsp -}} {1'b1} }),
+    .HReqDepth    (4'h0),
+    .HRspDepth    (4'h0),
+    .DReqDepth    ({ {{-  num_dsp -}} {4'h0} }),
+    .DRspDepth    ({ {{- num_dsp -}} {4'h0} }),
+    .ExplicitErrs (1'b0)
+  ) u_socket (
+    .clk_i  (clk_i),
+    .rst_ni (rst_ni),
+    .tl_h_i (tl_i),
+    .tl_h_o (tl_o_pre),
+    .tl_d_o (tl_socket_h2d),
+    .tl_d_i (tl_socket_d2h),
+    .dev_select_i (reg_steer)
+  );
+
+  // Create steering logic
+  always_comb begin
+    reg_steer =
+  {%- for win in windows %}
+        tl_i.a_address[AW-1:0] inside { {{- "[{}:{}]".format(win.offset, win.offset + win.size - 1 ) -}} } ? {{  interface.num_windows.bit_length() }}'d{{ loop.index0 }} :
+  {%- endfor %}
+        // Default set to register
+        {{ interface.num_windows.bit_length() }}'d{{ num_dsp - 1 }};
+
+    // Override this in case of an integrity error
+    if (intg_err) begin
+      reg_steer = {{ interface.num_windows.bit_length() }}'d{{ num_dsp - 1 }};
+    end
+  end
+{%- endif %}
+
+{%- if has_regs %}
 
   tlul_adapter_reg #(
     .RegAw(AW),
     .RegDw(DW),
-    .EnableDataIntgGen(0)
+    .EnableDataIntgGen({{ interface.any_integrity_bypass|int }})
   ) u_reg_if (
     .clk_i  (clk_i),
     .rst_ni (rst_ni),
@@ -194,30 +277,30 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
 {%- for reg in registers  %}
   {%- for offset in reg.offsets %}
     {%- set multireg_idx = loop.index0 %}
-    {%- set index = ('_' ~ multireg_idx|string) if reg.is_multireg %}
+    {%- set reg_suffix = ('_' ~ multireg_idx|string) if reg.offsets|length > 1 %}
     {%- if reg.needs_read_en %}
-  logic {{ reg.name|lower }}{{ index }}_re;
+  logic {{ reg.name|lower }}{{ reg_suffix }}_re;
     {%- endif %}
     {%- if reg.needs_write_en %}
-  logic {{ reg.name|lower }}{{ index }}_we;
+  logic {{ reg.name|lower }}{{ reg_suffix }}_we;
     {%- endif %}
     {%- for field in reg.fields %}
-      {%- set field_name = ('_' ~ field.name|lower) if reg.is_multifields %}
+      {%- set field_name = ('_' ~ field.name|lower ~ reg_suffix) if reg.is_multifields %}
       {%- set width = "[{}:0] ".format(field.width - 1) if field.width > 1 %}
       {%- if not reg.async_clk and field.sw_readable %} 
-  logic {{ width ~ reg.name|lower ~ index ~ field_name }}_qs;
+  logic {{ width ~ reg.name|lower ~ reg_suffix ~ field_name }}_qs;
       {%- endif %}
       {%- if not reg.async_clk and field.sw_writable %} 
-  logic {{ width ~ reg.name|lower ~ index ~ field_name }}_wd;
+  logic {{ width ~ reg.name|lower ~ reg_suffix ~ field_name }}_wd;
       {%- endif %}
       {%- if reg.shadowed and not reg.external %}
-  logic {{ reg.name|lower ~ index ~ field_name }}_storage_err;
-  logic {{ reg.name|lower ~ index ~ field_name }}_update_err;
+  logic {{ reg.name|lower ~ reg_suffix ~ field_name }}_storage_err;
+  logic {{ reg.name|lower ~ reg_suffix ~ field_name }}_update_err;
       {%- endif %}
     {%- endfor %}
     {%- if reg.async_clk %} 
-  logic [{{ reg.msb }}:0] {{reg.name|lower ~ index }}_qs;
-  logic {{ reg.name|lower ~ index }}_busy;
+  logic [{{ reg.msb }}:0] {{reg.name|lower ~ reg_suffix }}_qs;
+  logic {{ reg.name|lower ~ reg_suffix }}_busy;
     {%- endif %}
   {%- endfor %}
 {%- endfor %}
@@ -232,13 +315,13 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
       {%- for offset in reg.offsets %}
 
         {%- set multireg_idx = loop.index0 %}
-        {%- set index = ('_' ~ multireg_idx|string) if reg.is_multireg %}
+        {%- set index = ('_' ~ multireg_idx|string) if reg.offsets|length > 1 %}
         {%- set sig_name = (clk_name ~ reg.name ~ index)|lower %}
 
         {%- set src_we_expr = "{}_we".format(reg.name|lower ~ index) if reg.needs_write_en else "'0" %}
         {%- set src_wd_expr = "reg_wdata[{}:0]".format(reg.msb) if reg.needs_write_en else "'0" %}
         {%- set src_re_expr = "{}_re".format(reg.name|lower ~ index) if reg.needs_read_en else "'0" %}
-        {%- set src_regwen_expr = "{}_qs".format(reg.write_en_signal) if reg.sw_write_en else "'0" %}
+        {%- set src_regwen_expr = "{}_qs".format(reg.fields[0].write_en_signal.parent_name|lower) if reg.sw_write_en else "'0" %}
         {%- set dst_we_expr = "{}_we".format(sig_name) if reg.needs_write_en %}
         {%- set dst_wd_expr = "{}_wdata".format(sig_name) if reg.needs_write_en %}
         {%- set dst_re_expr = "{}_re".format(sig_name) if reg.needs_read_en %}
@@ -250,12 +333,12 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
 
         {%- for field in reg.fields %}
           {%- set bit_index = "[{}:0] ".format(field.width - 1) if field.msb != field.lsb %}
-          {%- set field_name = ('_' ~ field.name|lower) if reg.is_multifields %}
+          {%- set field_name = ('_' ~ field.name|lower ~ index) if reg.is_multifields %}
           {%- if reg.hw_writable %}
-  logic {{ bit_index }} {{ (sig_name ~ field_name ~ index )|lower }}_ds_int;
+  logic {{ bit_index }} {{ (sig_name ~ field_name)|lower }}_ds_int;
           {%- endif %}
           {%- if field.sw_readable %}
-  logic {{ bit_index }} {{ (sig_name ~ field_name ~ index )|lower }}_qs_int;
+  logic {{ bit_index }} {{ (sig_name ~ field_name)|lower }}_qs_int;
           {%- endif %}
         {%- endfor %}
         {%- if reg.hw_writable %}
@@ -283,14 +366,14 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
         {%- for field in reg.fields %}
           {%- set bits = "{}:{}".format(field.msb, field.lsb) if field.msb != field.lsb else field.msb %}
           {%- set bit_index = "[{}]".format(bits) if reg.is_multifields %}
-          {%- set field_name = ('_' ~ field.name|lower) if reg.is_multifields %}
+          {%- set field_name = ('_' ~ field.name|lower ~ index) if reg.is_multifields %}
 
           {%- if reg.hw_writable and field.sw_readable %}
-    {{ dst_ds_expr }}{{ bit_index }} = {{ sig_name ~ field_name ~ index }}_ds_int;
+    {{ dst_ds_expr }}{{ bit_index }} = {{ sig_name ~ field_name}}_ds_int;
           {%- endif %}
 
           {%- if field.sw_readable %}
-    {{ sig_name }}_qs{{ bit_index }} = {{ sig_name  ~ field_name ~ index  }}_qs_int;
+    {{ sig_name }}_qs{{ bit_index }} = {{ sig_name  ~ field_name}}_qs_int;
           {%- endif %}
         {%- endfor %}
   end
@@ -338,7 +421,7 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
 {%- for reg in registers  %}
   {%- for offset in reg.offsets %}
     {%- set multireg_idx = loop.index0 if reg.is_multireg %}
-    {%- set multireg_suffix = "_{}".format(multireg_idx) if reg.is_multireg %}
+    {%- set multireg_suffix = "_{}".format(multireg_idx) if reg.offsets|length > 1 %}
     {%- set regname = reg.name|lower ~ multireg_suffix %}
     {%- set clk_prefix = clk_name if reg.async_clk %}
     {%- if reg.is_multireg %}
@@ -354,12 +437,18 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
     {%- endif %}
     {%- if reg.needs_qe  %}
       {%- if reg.external %}
-  assign {{clk_prefix ~ regname }}_qe = &{{"{}".format(regname) }}_flds_we;
+        {%- if reg.fields_no_write_en > 0 %}
+  // This ignores QEs that are set to constant 0 due to read-only fields.
+  logic unused_{{ reg.name|lower }}_flds_we;
+  assign unused_{{ reg.name|lower }}_flds_we = {{ "^({}_flds_we & {}'h{:x})".format(reg.name|lower, reg.fields|length, reg.fields_no_write_en ) }};
+      {%- endif %}
+      {%- set opt_expr = " | {}'h{:x}".format(reg.fields|length, reg.fields_no_write_en ) if reg.fields_no_write_en > 0 %}
+  assign {{regname }}_qe = &{{ "({}_flds_we{})".format(regname, opt_expr) }};
       {%- else %}
   prim_flop #(
     .Width(1),
     .ResetValue(0)
-  ) u_{{ reg.name|lower ~ multireg_idx }}_qe (
+  ) u_{{ reg.name|lower ~ loop.index0}}_qe (
     .clk_i(clk_i),
     .rst_ni(rst_ni),
     .d_i(&({{ regname }}_flds_we {{"| {}'h{:x}".format(reg.fields|length, reg.fields_no_write_en) if reg.fields_no_write_en }})),
@@ -372,22 +461,22 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
     {%- endif %}
     {%- if reg.sw_write_en and reg.needs_write_en %}
   // Create REGWEN-gated WE signal
-  logic {{ regname }}_gated_we;
+  logic {{clk_prefix ~ regname }}_gated_we;
       {%- set assign.expr = (clk_prefix ~ regname ~ '_we')|lower %}
       {%- if reg.sw_write_en %}
         {%- set wr_en_sig_name = reg.fields[0].write_en_signal.name|lower %}
         {%- set wr_en_reg_name = reg.fields[0].write_en_signal.parent_name|lower %}
-        {%- set assign.expr = (clk_prefix ~ regname|lower ~ '_regwen') if reg.async else "{}_qs".format(wr_en_reg_name) %}
+        {%- set assign.expr = (clk_prefix ~ regname|lower ~ '_regwen') if reg.async_clk else "{}_qs".format(wr_en_reg_name) %}
         {%- if "MultiBitBool" in reg.fields[0].write_en_signal.encode %}
           {%- set width = reg.fields[0].write_en_signal.width %}
           {%- set assign.expr = "prim_mubi_pkg::mubi{}_test_true_strict(prim_mubi_pkg::mubi{}_t'({}_qs))".format(width, width, wr_en_sig_name)|lower %}
         {%- endif %}
       {%- endif %}
-  assign {{ regname }}_gated_we = {{ regname }}_we & {{ assign.expr }};
+  assign {{ clk_prefix ~ regname }}_gated_we = {{ clk_prefix ~ regname }}_we & {{ assign.expr }};
     {%- endif %}
     {%- for field in reg.fields  %}
       {%- set field_name = "_{}{}".format(field.name, multireg_suffix)|lower if reg.is_multifields %}
-      {%- set property = ".{}".format(field.name)|lower if reg.is_multifields %}
+      {%- set property = ".{}".format(field.name)|lower if reg.is_multifields and not reg.is_homogeneous %}
       {%- set bit_index = "[{}:{}]".format(field.msb, field.lsb) if field.msb != field.lsb else "[{}]".format(field.msb) %}
       {%- if reg.is_multifields %}
   //   F{{ '[{}{}]: {}:{}'.format(field.name, multireg_suffix, field.msb, field.lsb)|lower }}
@@ -409,12 +498,13 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
       {%- endif %}
       {%- endif %}
 {{- space }}
-    {%- set sig_name = (reg.name ~ ("[{}]".format(multireg_idx) if reg.is_multireg) ~ property)|lower -%}
+    {%- set idx = loop.index0 if reg.is_homogeneous and reg.is_multifields else multireg_idx %}
+    {%- set sig_name = (reg.name ~ ("[{}]".format(idx) if reg.is_multireg) ~ property)|lower -%}
     {%- set suffix = "_int" if reg.async_clk %}
       {%- if reg.external or reg.shadowed %}
-    .re     ({{ "{}{}{}_re".format(clk_prefix, reg.name, multireg_suffix)|lower if reg.sw_readable or reg.shadowed else "1'b0" }}),
+    .re     ({{ "{}{}{}_re".format(clk_prefix, reg.name, multireg_suffix)|lower if field.sw_readable or reg.shadowed else "1'b0" }}),
       {%- endif %}
-    .we     ({{ "{}{}_we".format(clk_prefix ~ regname, ("_gated" if field.sw_write_en)) if field.sw_writable else "1'b0"  }}),
+    .we     ({{ "{}{}_{}".format(clk_prefix ~ regname, ("_gated" if field.sw_write_en), "re" if field.clear_onread  else "we") if field.sw_writable else "1'b0"  }}),
     .wd     ({{ "{}{}{}_wd{}{}".format(clk_prefix, regname, field_name if not reg.async_clk, "ata" if reg.async_clk, bit_index if reg.async_clk) if field.sw_writable else "'0"  }}),
       {%- if not reg.external %}
     .de     ({{ "hw2reg.{}.de".format(sig_name ) if field.hw_writable else "1'b0" }}),
@@ -434,7 +524,7 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
     .phase  (),
 
     // Shadow register error conditions
-        {%- if reg.async %}
+        {%- if reg.async_clk %}
     .err_update  (async_{{ regname ~ field_name }}_err_update),
     .err_storage (async_{{ regname ~ field_name }}_err_storage)
         {%- else %}
@@ -460,7 +550,7 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
   {%- set ns = namespace(counter=0) %}
   {%- for reg in registers %}
     {%- for offset in reg.offsets %}
-      {%- set index = "{:>2}".format(ns.counter) %}
+      {%- set index = "{num:>{width}}".format(num=ns.counter, width=num_regs_digits) %}
       {%- set ns.counter = ns.counter + 1 %}
     addr_hit[{{ index }}] = (reg_addr == {{ (ip_name ~ '_' ~ reg.name)|upper }}{% if reg.offsets|length > 1 %}_{{ loop.index0 }}{% endif %}_OFFSET);
     {%- endfor %}
@@ -477,7 +567,7 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
   {%- for reg in registers %}
     {%- set outer_loop = loop -%}
     {%- for offset in reg.offsets %}
-      {%- set index = "{:>2}".format(ns.counter) %}
+      {%- set index = "{num:>{width}}".format(num=ns.counter, width=num_regs_digits) %}
       {%- set ns.counter = ns.counter + 1 %}
       {%- if loop.first and outer_loop.first -%} ( {%- endif %}
                (addr_hit[{{ index }}] & (|({{ (ip_name ~ interface_name)|upper}}_PERMIT[{{ index }}] & ~reg_be))) 
@@ -490,8 +580,8 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
   {%- set ns = namespace(re_index=0) -%}
   {%- for reg in registers  %}
     {%- for offset in reg.offsets %}
-      {%- set multireg_index = ('_' ~ loop.index0|string) if reg.offsets|length > 1 %}
-      {%- set regname = "{}{}".format(reg.name, multireg_index)|lower %}
+      {%- set reg_suffix = ('_' ~ loop.index0|string) if reg.offsets|length > 1 %}
+      {%- set regname = "{}{}".format(reg.name, reg_suffix)|lower %}
       {%- if reg.needs_read_en %}
   assign {{ regname }}_re = addr_hit[{{ ns.re_index }}] & reg_re & !reg_error;
       {%- endif %}
@@ -499,14 +589,15 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
   assign {{ regname }}_we = addr_hit[{{ ns.re_index }}] & reg_we & !reg_error;
       {%- endif %}
       {%- set ns.re_index = ns.re_index + 1 %}
-      {%- if reg.sw_writable and not reg.async_clk %}
-        {%- for field in reg.fields %}
-          {%- set field_name = ('_' ~ field.name|lower) if reg.is_multifields %}
-            {%- set expr = "{}{}{}".format(reg.name, field_name, multireg_index)|lower %}
-            {%- set bit_index = "{}:{}".format(field.msb, field.lsb) if field.width > 1 else field.msb %}
-  assign {{ expr }}_wd = reg_wdata[{{ bit_index }}];
-        {%- endfor %}
-      {%- endif %}
+      {%- for field in reg.fields %}
+        {%- if field.sw_writable and not reg.async_clk %}
+          {%- set field_name = ('_' ~ field.name|lower ~ reg_suffix) if reg.is_multifields %}
+          {%- set left_expr = "{}{}{}".format(reg.name, reg_suffix, field_name)|lower %}
+          {%- set bit_index = "{}:{}".format(field.msb, field.lsb) if field.width > 1 else field.msb %}
+          {%- set right_expr = "'1" if field.clear_onread else "reg_wdata[{}]".format(bit_index) %}
+  assign {{ left_expr }}_wd = {{ right_expr }};
+        {%- endif %}
+      {%- endfor %}
     {%- endfor %}
   {% endfor %}
 
@@ -515,8 +606,8 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
   {%- set ns = namespace(counter=0) %}
   {%- for reg in registers %}
     {%- for offset in reg.offsets %}
-      {%- set multireg_index = ('_' ~ loop.index0|string) if reg.offsets|length > 1 %}
-      {%- set expr = "{}{}{}_we".format(reg.name, multireg_index, "_gated" if not reg.async and reg.sw_write_en)|lower if reg.needs_write_en else "1'b0" %}
+      {%- set reg_suffix = ('_' ~ loop.index0|string) if reg.offsets|length > 1 %}
+      {%- set expr = "{}{}{}_we".format(reg.name, reg_suffix, "_gated" if not reg.async_clk and reg.sw_write_en)|lower if reg.needs_write_en else "1'b0" %}
     reg_we_check[{{ ns.counter }}] = {{ expr }};
       {%- set ns.counter = ns.counter + 1 %}
     {%- endfor %}
@@ -530,16 +621,16 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
   {%- set ns = namespace(counter=0) %}
   {%- for reg in registers %}
     {%- for offset in reg.offsets %}
-      {%- set multireg_index = ('_' ~ loop.index0|string) if reg.is_multireg %}
+      {%- set reg_suffix = ('_' ~ loop.index0|string) if reg.offsets|length > 1 and not (reg.is_homogeneous and reg.is_multifields)  %}
       addr_hit[{{ ns.counter }}]: begin
       {%- set ns.counter = ns.counter + 1 %}
       {%- if reg.async_clk %}
-        reg_rdata_next = DW'({{ "{}{}_qs".format(reg.name, multireg_index)|lower }});
+        reg_rdata_next = DW'({{ "{}{}_qs".format(reg.name, reg_suffix)|lower }});
       {%- else %}
         {%- for field in reg.fields %}
-            {%- set field_name = ('_' ~ field.name|lower) if reg.is_multifields %}
+            {%- set field_name = ('_' ~ field.name|lower ~ reg_suffix) if reg.is_multifields %}
             {%- set index = "{}:{}".format(field.msb, field.lsb) if field.width > 1 else field.msb %}
-            {%- set expr = "{}{}{}_qs".format(reg.name, field_name, multireg_index)|lower if field.sw_readable else "'0" %}
+            {%- set expr = "{}{}{}_qs".format(reg.name, reg_suffix, field_name)|lower if field.sw_readable else "'0" %}
         reg_rdata_next{{ "[{}] = {}".format(index, expr)|lower }};
         {%- endfor %}
       {%- endif %}
@@ -590,7 +681,8 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
         {{- "," if not ns.is_first }}
         {%- set ns.is_first = false %}
         {%- for field in reg.fields  %}
-    {{ "{}_{}_storage_err".format(reg.name, field.name)|lower }}
+          {%- set field_name = "_{}".format(field.name)|lower if reg.is_multifields %}
+    {{ "{}{}_storage_err".format(reg.name, field_name)|lower }}
     {{- "," if not loop.last }}
         {%- endfor %}
       {%- endif %}
@@ -603,7 +695,8 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
         {{- "," if not ns.is_first }}
         {%- set ns.is_first = false %}
         {%- for field in reg.fields  %}
-    {{ "{}_{}_update_err".format(reg.name, field.name)|lower }}
+          {%- set field_name = "_{}".format(field.name)|lower if reg.is_multifields %}
+    {{ "{}{}_update_err".format(reg.name, field_name)|lower }}
     {{- "," if not loop.last }}
         {%- endfor %}
       {%- endif %}

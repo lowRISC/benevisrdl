@@ -4,7 +4,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import click
-import sys
 from pathlib import Path
 
 
@@ -26,20 +25,20 @@ def main():
     # help="The destination dir to generate the output.",
 )
 def export_rtl(input_file: str, out_dir: str):
-    from systemrdl import RDLCompiler, RDLCompileError
+    from systemrdl import RDLCompiler
 
     rdlc = RDLCompiler()
     try:
         rdlc.compile_file(input_file)
         root = rdlc.elaborate()
-    except RDLCompileError:
-        sys.exit(1)
+    except Exception as e:
+        raise RuntimeError(f"In file {input_file}") from e
 
     import export_rtl
 
     try:
         export_rtl.run(rdlc, root, Path(out_dir))
-    except RDLCompileError:
-        sys.exit(1)
+    except Exception as e:
+        raise RuntimeError(f"In file {input_file}") from e
 
-    print("Successfully finished!")
+    print("Successfully finished!\n")

@@ -7,8 +7,9 @@ from systemrdl import RDLCompiler
 from systemrdl.rdltypes import AccessType, OnReadType, OnWriteType
 from systemrdl.rdltypes.user_enum import UserEnumMeta
 from systemrdl.ast.literals import StringLiteral, BoolLiteral, IntLiteral, BuiltinEnumLiteral
+from systemrdl.ast.cast import AssignmentCast
 from systemrdl.ast.references import InstRef
-from systemrdl.component import Addrmap, Reg, Field, Mem
+from systemrdl.component import Addrmap, Reg, Field, Mem, AddressableComponent
 from dataclasses import dataclass, field
 
 
@@ -39,8 +40,12 @@ class RdlExporter:
             else (field.msb.get_value(), field.lsb.get_value())
         )
 
-    def _get_register_offset(self, reg: Reg) -> int:
-        return reg.addr_offset if isinstance(reg.addr_offset, int) else reg.addr_offset.get_value()
+    def _get_offset(self, comp: AddressableComponent) -> str:
+        if isinstance(comp.addr_offset, AssignmentCast):
+            return " @ 0x{:X}".format(comp.addr_offset.get_value())
+        if isinstance(comp.addr_offset, int):
+            return " @ 0x{:X}".format(comp.addr_offset)
+        return ""
 
     def _get_register_array_dim(self, reg: Reg) -> int:
         return (
@@ -51,7 +56,7 @@ class RdlExporter:
 
     def _emit_dynamic_assignment(self) -> None:
         # Nothing to be emited
-        current_scope = self.ast_path[-1]
+        current_scope = self.ast_path[-1].lower()
         if current_scope not in self.dynamic_assignment:
             return
         for scope in self.dynamic_assignment.pop(current_scope):
@@ -87,8 +92,8 @@ class RdlExporter:
             elif isinstance(obj, InstRef):
                 # This should be emited at a higher scope indicated by `ref_root._scope_name`.
                 ref = obj.get_value()
-                scope = ref.ref_root._scope_name
-                self.dynamic_assignment.setdefault(scope, []).append(
+                scope = ref.ref_root._scope_name or ref.ref_root.type_name
+                self.dynamic_assignment.setdefault(scope.lower(), []).append(
                     {
                         "property": name,
                         "ast_path": self.ast_path.copy(),
@@ -142,7 +147,9 @@ class RdlExporter:
         self.indent_pos += self.indent_width
         self._emit_property(mem.properties)
         self.indent_pos -= self.indent_width
-        self.stream += self._indent() + f"}} {mem.inst_name};\n"
+        self.stream += self._indent() + f"}} {mem.inst_name}" + self._arrays(mem)
+        offset = self._get_offset(mem)
+        self.stream += f"{offset};\n"
         self.ast_path.pop()
 
     def _emit_field(self, field: Field) -> None:
@@ -171,9 +178,9 @@ class RdlExporter:
             else:
                 self._raise_type_error(type(child))
         self.indent_pos -= self.indent_width
-        offset = self._get_register_offset(register)
         self.stream += self._indent() + f"}} {register.inst_name}" + self._arrays(register)
-        self.stream += f" @ 0x{offset:X};\n"
+        offset = self._get_offset(register)
+        self.stream += f"{offset};\n"
         self.ast_path.pop()
 
     def _emit_addrmap(self, name: str, addrmap: Addrmap) -> None:

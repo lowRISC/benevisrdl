@@ -44,6 +44,7 @@ def run(rdlc: RDLCompiler, obj: node.RootNode, out_dir: Path):
 
 class OtInterfaceBuilder:
     num_regs: int = 0  # The number of registers of an interface
+    num_windows: int = 0  # The number of registers of an interface
     any_async_clk: bool = False  # Whether is there any register with async clock in the interface
     all_async_clk: bool = True  # Whether all registers have async clock in the interface
     async_registers: list = [(int, str)]  # List of all the (index, register) with async clock
@@ -61,6 +62,7 @@ class OtInterfaceBuilder:
         obj = dict()
         obj["name"] = field.inst_name
         obj["type"] = "field"
+        obj["desc"] = field.get_property("desc", default="")
         obj["parent_name"] = field.parent.inst_name
         obj["lsb"] = field.lsb
         obj["msb"] = field.msb
@@ -101,6 +103,9 @@ class OtInterfaceBuilder:
         obj["width"] = mem.get_property("memwidth")
         obj["offset"] = mem.address_offset
         obj["size"] = obj["width"] * obj["entries"] // 8
+        obj["integrity_bypass"] = mem.get_property("integrity_bypass", default=False)
+        self.all_async_clk &= bool(mem.get_property("async_clk", default=False))
+        self.num_windows += 1
         return obj
 
     def get_reg(self, reg: node.RegNode) -> dict:
@@ -158,18 +163,18 @@ class OtInterfaceBuilder:
         obj["needs_int_qe"] = opentitan.needs_int_qe(obj)
         obj["fields_no_write_en"] = opentitan.fields_no_write_en(obj)
         obj["is_multifields"] = len(obj["fields"]) > 1
+        obj["is_homogeneous"] = opentitan.is_homogeneous(obj)
 
         self.any_async_clk |= bool(obj["async_clk"])
         self.all_async_clk &= bool(obj["async_clk"])
         self.any_shadowed_reg |= bool(obj["shadowed"])
 
+        array_size = len(obj["offsets"])
         if bool(obj["async_clk"]):
-            array_size = len(obj["offsets"])
             for index in range(0, array_size):
                 reg_name = reg.inst_name + (f"_{index}" if array_size > 1 else "")
                 self.async_registers.append((self.reg_index + index, reg_name))
-            self.reg_index += array_size - 1
-        self.reg_index += 1
+        self.reg_index += array_size
         return obj
 
     def get_paramesters(self, obj: node.AddrmapNode | node.RegfileNode) -> [dict]:
@@ -188,6 +193,7 @@ class OtInterfaceBuilder:
         Parse an interface and return a dictionary.
         """
         self.num_regs = 0
+        self.num_windows = 0
         self.any_async_clk = False
         self.all_async_clk = True
         self.any_shadowed_reg = False
@@ -221,7 +227,20 @@ class OtInterfaceBuilder:
             )
         interface["addr_width"] = (last_addr - 1).bit_length()
         interface["num_regs"] = self.num_regs
+        interface["num_windows"] = self.num_windows
         interface["async_registers"] = self.async_registers
+        interface["needs_aw"] = (
+            interface["num_regs"] > 0
+            or interface["num_windows"] > 1
+            or interface["windows"][0]["offset"] > 0
+            or interface["windows"][0]["size"] != (1 << interface["addr_width"])
+        )
+        interface["any_async_clk"] = self.any_async_clk
+        interface["all_async_clk"] = self.all_async_clk
+        interface["any_shadowed_reg"] = self.any_shadowed_reg
+        interface["any_integrity_bypass"] = any(
+            [win["integrity_bypass"] for win in interface["windows"]]
+        )
         return interface
 
     def parse_root(self, root: node.AddrmapNode) -> dict:
@@ -247,7 +266,7 @@ class OtInterfaceBuilder:
             if isinstance(child, node.AddrmapNode):
                 child_obj = self.get_interface(child, DEFAULT_INTERFACE_NAME)
                 obj["interfaces"].append(child_obj)
-            elif isinstance(child, node.RegNode):
+            elif isinstance(child, node.RegNode | node.MemNode):
                 continue
             else:
                 print(
@@ -261,8 +280,4 @@ class OtInterfaceBuilder:
             interface = self.get_interface(root)
             obj["interfaces"].append(interface)
 
-        for interface in obj["interfaces"]:
-            interface["any_async_clk"] = self.any_async_clk
-            interface["all_async_clk"] = self.all_async_clk
-            interface["any_shadowed_reg"] = self.any_shadowed_reg
         return obj
