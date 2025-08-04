@@ -1,33 +1,32 @@
 [project]
 name = "rdlexporter"
-version = "0.1.0"
+version = "0.1.6"
 description = "Library to export rdl files"
 requires-python = ">=3.10"
 keywords = ["SystemRDL", "library", "exporter"]
-dependencies = []
+readme = "README.md"
+dependencies = [
+  "peakrdl>=1.4.0",
+]
 
 authors = [
     { name = "lowRISC contributors"},
 ]
 
 [project.urls]
-Homepage = "https://github.com/lowrisc/benevisrdl/rdlexporter"
-Issues = "https://github.com/lowrisc/benevisrdl/rdlexporter/issues"
-Documentation = "https://github.com/lowrisc/benevisrdl/rdlexporter"
+Homepage = "https://github.com/lowrisc/benevisrdl"
+Issues = "https://github.com/lowrisc/benevisrdl/issues"
+Documentation = "https://github.com/lowrisc/benevisrdl"
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["uv_build>=0.8.4,<0.9.0"]
+build-backend = "uv_build"
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/rdlexporter"]
-
-[tool.hatch.build.targets.sdist]
-exclude = [
-    "/.github",
-    "/tests",
-    "/*.pyc",
-    "/.pytest_cache",
-    "/.uv",
-    "/.venv",
+[tool.pyright]
+include = ["src"]
+reportMissingImports = "error"
+reportMissingTypeStubs = false
+venv = ".venv"
+executionEnvironments = [
+    { root = "src" },
 ]

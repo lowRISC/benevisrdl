@@ -46,8 +46,7 @@ uv sync --all-extras
 ```
 Build package
 ```sh
-cd rdl-exporter
-uv run python -m build
+uv build --all
 ```
 Install the package locally
 ```sh
