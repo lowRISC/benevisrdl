@@ -737,7 +737,7 @@ wheels = [
 
 [[package]]
 name = "rdl2ot"
-version = "0.1.5"
+version = "0.1.7"
 source = { editable = "rdl2ot" }
 dependencies = [
     { name = "click" },
@@ -754,7 +754,7 @@ requires-dist = [
 
 [[package]]
 name = "rdlexporter"
-version = "0.1.5"
+version = "0.1.6"
 source = { editable = "rdlexporter" }
 dependencies = [
     { name = "peakrdl" },

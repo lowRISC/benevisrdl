@@ -4,12 +4,13 @@
 
 import sys
 from pathlib import Path
-from systemrdl import RDLCompiler, RDLCompileError, RDLImporter
-from systemrdl import rdltypes
+
+from systemrdl import RDLCompileError, RDLCompiler, RDLImporter, rdltypes
+from systemrdl.ast.references import InstRef
 from systemrdl.core.parameter import Parameter
 from systemrdl.messages import FileSourceRef
 from systemrdl.rdltypes import AccessType, OnReadType, OnWriteType
-from systemrdl.ast.references import InstRef
+
 from rdlexporter import RdlExporter
 
 SNAPSHOTS_DIR = Path(__file__).parent / "snapshots"

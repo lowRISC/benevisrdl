@@ -2,15 +2,16 @@
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
 
+from dataclasses import dataclass, field
 from pathlib import Path
+
 from systemrdl import RDLCompiler
+from systemrdl.ast.cast import AssignmentCast
+from systemrdl.ast.literals import BoolLiteral, BuiltinEnumLiteral, IntLiteral, StringLiteral
+from systemrdl.ast.references import InstRef
+from systemrdl.component import AddressableComponent, Addrmap, Field, Mem, Reg
 from systemrdl.rdltypes import AccessType, OnReadType, OnWriteType
 from systemrdl.rdltypes.user_enum import UserEnumMeta
-from systemrdl.ast.literals import StringLiteral, BoolLiteral, IntLiteral, BuiltinEnumLiteral
-from systemrdl.ast.cast import AssignmentCast
-from systemrdl.ast.references import InstRef
-from systemrdl.component import Addrmap, Reg, Field, Mem, AddressableComponent
-from dataclasses import dataclass, field
 
 
 @dataclass
@@ -42,9 +43,9 @@ class RdlExporter:
 
     def _get_offset(self, comp: AddressableComponent) -> str:
         if isinstance(comp.addr_offset, AssignmentCast):
-            return " @ 0x{:X}".format(comp.addr_offset.get_value())
+            return f" @ 0x{comp.addr_offset.get_value():X}"
         if isinstance(comp.addr_offset, int):
-            return " @ 0x{:X}".format(comp.addr_offset)
+            return f" @ 0x{comp.addr_offset:X}"
         return ""
 
     def _get_register_array_dim(self, reg: Reg) -> int:

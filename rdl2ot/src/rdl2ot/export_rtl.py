@@ -4,11 +4,11 @@
 
 import json
 from pathlib import Path
-from systemrdl import RDLCompiler
-from systemrdl import node
-from systemrdl.rdltypes import OnReadType
-from jinja2 import Environment, FileSystemLoader
+
 import opentitan
+from jinja2 import Environment, FileSystemLoader
+from systemrdl import RDLCompiler, node
+from systemrdl.rdltypes import OnReadType
 
 TEMPLATES_DIR = "./src/templates"
 DEFAULT_INTERFACE_NAME = "regs"
@@ -56,8 +56,7 @@ class OtInterfaceBuilder:
         self.rdlc = rdlc
 
     def get_field(self, field: node.FieldNode) -> dict:
-        """
-        Parse a field and return a dictionary.
+        """Parse a field and return a dictionary.
         """
         obj = dict()
         obj["name"] = field.inst_name
@@ -92,8 +91,7 @@ class OtInterfaceBuilder:
         return obj
 
     def get_mem(self, mem: node.FieldNode) -> dict:
-        """
-        Parse a memory and return a dictionary representing a window.
+        """Parse a memory and return a dictionary representing a window.
         """
         obj = dict()
         obj["name"] = mem.inst_name
@@ -109,8 +107,7 @@ class OtInterfaceBuilder:
         return obj
 
     def get_reg(self, reg: node.RegNode) -> dict:
-        """
-        Parse a register and return a dictionary.
+        """Parse a register and return a dictionary.
         """
         obj = dict()
         obj["name"] = reg.inst_name
@@ -131,7 +128,7 @@ class OtInterfaceBuilder:
             obj["is_multireg"] = True
             self.num_regs += reg.array_dimensions[0]
             offset = reg.raw_address_offset
-            for _idx in range(0, reg.array_dimensions[0]):
+            for _idx in range(reg.array_dimensions[0]):
                 obj["offsets"].append(offset)
                 offset += reg.array_stride
         else:
@@ -171,17 +168,15 @@ class OtInterfaceBuilder:
 
         array_size = len(obj["offsets"])
         if bool(obj["async_clk"]):
-            for index in range(0, array_size):
+            for index in range(array_size):
                 reg_name = reg.inst_name + (f"_{index}" if array_size > 1 else "")
                 self.async_registers.append((self.reg_index + index, reg_name))
         self.reg_index += array_size
         return obj
 
     def get_paramesters(self, obj: node.AddrmapNode | node.RegfileNode) -> [dict]:
+        """Parse the custom property localparams and return a list of  dictionaries.
         """
-        Parse the custom property localparams and return a list of  dictionaries.
-        """
-
         res = [
             {"name": param.name, "type": "int", "value": param.get_value()}
             for param in obj.inst.parameters
@@ -189,8 +184,7 @@ class OtInterfaceBuilder:
         return res
 
     def get_interface(self, addrmap: node.AddrmapNode, defalt_name: None | str = None) -> dict:
-        """
-        Parse an interface and return a dictionary.
+        """Parse an interface and return a dictionary.
         """
         self.num_regs = 0
         self.num_windows = 0
@@ -244,8 +238,7 @@ class OtInterfaceBuilder:
         return interface
 
     def parse_root(self, root: node.AddrmapNode) -> dict:
-        """
-        Parse the root node and return a dictionary representing a window.
+        """Parse the root node and return a dictionary representing a window.
         """
         if root.is_array:
             print("Error: Unsupported array type on the top")

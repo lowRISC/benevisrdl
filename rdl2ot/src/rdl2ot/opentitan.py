@@ -2,14 +2,14 @@
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
 
-from systemrdl.rdltypes import OnReadType, OnWriteType, AccessType
-from systemrdl import node
 import re
+
+from systemrdl import node
+from systemrdl.rdltypes import AccessType, OnReadType, OnWriteType
 
 
 def register_permit_mask(reg: dict) -> int:
-    """
-    One bit presents one byte in the register, so in total 4 bits are used.
+    """One bit presents one byte in the register, so in total 4 bits are used.
     """
     w = reg["msb"] + 1
     if w > 24:
@@ -66,7 +66,8 @@ def needs_int_qe(reg: dict()) -> bool:
     """Return true if the register or at least one field needs an
     internal q-enable.  An internal q-enable means the net
     may be consumed by other reg logic but will not be exposed
-    in the package file."""
+    in the package file.
+    """
     return (bool(reg["async_clk"]) and reg["hw_writable"]) or needs_qe(reg)
 
 

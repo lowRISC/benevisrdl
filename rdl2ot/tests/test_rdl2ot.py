@@ -2,9 +2,9 @@
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
 
-from pathlib import Path
-import sys
 import subprocess
+import sys
+from pathlib import Path
 
 CLI_TOOL_PATH = Path(__file__).parent.parent / "src/rdl2ot"
 SNAPSHOTS_DIR = Path(__file__).parent / "snapshots"
