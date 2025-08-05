@@ -2,10 +2,11 @@
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
 
-import sys
+"""Unittests."""
+
 from pathlib import Path
 
-from systemrdl import RDLCompileError, RDLCompiler, RDLImporter, rdltypes
+from systemrdl import RDLCompiler, RDLImporter, rdltypes
 from systemrdl.ast.references import InstRef
 from systemrdl.core.parameter import Parameter
 from systemrdl.messages import FileSourceRef
@@ -16,17 +17,14 @@ from rdlexporter import RdlExporter
 SNAPSHOTS_DIR = Path(__file__).parent / "snapshots"
 
 
-def run_ip_test_from_file(tmp_path: Path, ip_block: str):
+def _run_ip_test_from_file(tmp_path: Path, ip_block: str) -> None:
     input_rdl = SNAPSHOTS_DIR / f"{ip_block}.rdl"
     snapshot_file = input_rdl
     snapshot_content = snapshot_file.read_text(encoding="utf-8")
     output_file = tmp_path / f"{ip_block}.rdl"
 
     rdlc = RDLCompiler()
-    try:
-        rdlc.compile_file(input_rdl)
-    except RDLCompileError:
-        sys.exit(1)
+    rdlc.compile_file(input_rdl)
 
     # Include the user defined enums and properties.
     with output_file.open("w") as f:
@@ -41,15 +39,18 @@ def run_ip_test_from_file(tmp_path: Path, ip_block: str):
     )
 
 
-def test_cli_uart_from_file(tmp_path: Path):
-    run_ip_test_from_file(tmp_path, "uart")
+def test_cli_uart_from_file(tmp_path: Path) -> None:
+    """Test the uart."""
+    _run_ip_test_from_file(tmp_path, "uart")
 
 
-def test_cli_lc_ctrl_from_file(tmp_path: Path):
-    run_ip_test_from_file(tmp_path, "lc_ctrl")
+def test_cli_lc_ctrl_from_file(tmp_path: Path) -> None:
+    """Test the lc_ctrl."""
+    _run_ip_test_from_file(tmp_path, "lc_ctrl")
 
 
-def test_importer(tmp_path: Path):
+def test_importer(tmp_path: Path) -> None:
+    """Test with the SystemRDL importer."""
     input_rdl = SNAPSHOTS_DIR / "generic.rdl"
     snapshot_file = input_rdl
     snapshot_content = snapshot_file.read_text(encoding="utf-8")
@@ -75,13 +76,13 @@ def test_importer(tmp_path: Path):
     field_en = imp.create_field_definition("EN")
     field_en = imp.instantiate_field(field_en, "EN", 0, 1)
     imp.assign_property(field_en, "reset", 0x00)
-    imp.assign_property(field_en, "swmod", True)
+    imp.assign_property(field_en, "swmod", value=True)
     imp.assign_property(field_en, "desc", "Enable the ip")
 
     field_mode = imp.create_field_definition("MODE")
     field_mode = imp.instantiate_field(field_mode, "MODE", 2, 8)
     imp.assign_property(field_mode, "reset", 0x7)
-    imp.assign_property(field_mode, "swmod", False)
+    imp.assign_property(field_mode, "swmod", value=False)
     imp.assign_property(field_mode, "desc", "Define the mode.")
     imp.assign_property(field_mode, "sw", AccessType.rw)
     imp.assign_property(field_mode, "onread", OnReadType.rclr)
@@ -106,7 +107,7 @@ def test_importer(tmp_path: Path):
 
     value = 0x56
     param = Parameter(rdltypes.get_rdltype(value), "Width")
-    param._value = value
+    param._value = value  # noqa: SLF001
     addrmap.parameters.append(param)
 
     imp.register_root_component(addrmap)

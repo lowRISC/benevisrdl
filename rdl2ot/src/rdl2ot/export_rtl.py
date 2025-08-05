@@ -2,6 +2,8 @@
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
 
+"""Export RDL to opentitan RTL."""
+
 import json
 from pathlib import Path
 
@@ -14,18 +16,18 @@ TEMPLATES_DIR = "./src/templates"
 DEFAULT_INTERFACE_NAME = "regs"
 
 
-def run(rdlc: RDLCompiler, obj: node.RootNode, out_dir: Path):
+def run(rdlc: RDLCompiler, obj: node.RootNode, out_dir: Path) -> None:
+    """Export RDL to opentitan RTL."""
     factory = OtInterfaceBuilder(rdlc)
     data = factory.parse_root(obj.top)
-    with open("/tmp/reg.json", "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
+
+    Path(out_dir / "rdl.json").write_text(json.dumps(data, indent=2), encoding="utf-8")
 
     file_loader = FileSystemLoader(TEMPLATES_DIR)
     env = Environment(loader=file_loader)
 
     ip_name = data["ip_name"]
     reg_pkg_tpl = env.get_template("reg_pkg.sv.tpl")
-    # stream = reg_pkg_tpl.stream(data)
     stream = reg_pkg_tpl.render(data)
     path = out_dir / f"{ip_name}_reg_pkg.sv"
     path.open("w").write(stream)
@@ -35,7 +37,6 @@ def run(rdlc: RDLCompiler, obj: node.RootNode, out_dir: Path):
     for interface in data["interfaces"]:
         name = "_{}".format(interface["name"].lower()) if "name" in interface else ""
         data_ = {"ip_name": ip_name, "interface": interface}
-        # stream = reg_top_tpl.stream(data_)
         stream = reg_top_tpl.render(data_).replace(" \n", "\n")
         path = out_dir / f"{ip_name}{name}_reg_top.sv"
         path.open("w").write(stream)
@@ -43,6 +44,8 @@ def run(rdlc: RDLCompiler, obj: node.RootNode, out_dir: Path):
 
 
 class OtInterfaceBuilder:
+    """Opentitan Interface Builder."""
+
     num_regs: int = 0  # The number of registers of an interface
     num_windows: int = 0  # The number of registers of an interface
     any_async_clk: bool = False  # Whether is there any register with async clock in the interface
@@ -52,13 +55,13 @@ class OtInterfaceBuilder:
     reg_index: int = 0
     rdlc: RDLCompiler
 
-    def __init__(self, rdlc: RDLCompiler):
+    def __init__(self, rdlc: RDLCompiler) -> None:
+        """Constructor."""
         self.rdlc = rdlc
 
     def get_field(self, field: node.FieldNode) -> dict:
-        """Parse a field and return a dictionary.
-        """
-        obj = dict()
+        """Parse a field and return a dictionary."""
+        obj = {}
         obj["name"] = field.inst_name
         obj["type"] = "field"
         obj["desc"] = field.get_property("desc", default="")
@@ -91,9 +94,8 @@ class OtInterfaceBuilder:
         return obj
 
     def get_mem(self, mem: node.FieldNode) -> dict:
-        """Parse a memory and return a dictionary representing a window.
-        """
-        obj = dict()
+        """Parse a memory and return a dictionary representing a window."""
+        obj = {}
         obj["name"] = mem.inst_name
         obj["entries"] = mem.get_property("mementries")
         obj["sw_writable"] = mem.is_sw_writable
@@ -107,9 +109,8 @@ class OtInterfaceBuilder:
         return obj
 
     def get_reg(self, reg: node.RegNode) -> dict:
-        """Parse a register and return a dictionary.
-        """
-        obj = dict()
+        """Parse a register and return a dictionary."""
+        obj = {}
         obj["name"] = reg.inst_name
         obj["type"] = "reg"
         obj["width"] = reg.get_property("regwidth")
@@ -140,8 +141,8 @@ class OtInterfaceBuilder:
         msb = 0
         reset_val = 0
         bitmask = 0
-        for field in reg.fields():
-            field = self.get_field(field)
+        for f in reg.fields():
+            field = self.get_field(f)
             obj["fields"].append(field)
             sw_write_en |= field["sw_write_en"]
             msb = max(msb, field["msb"])
@@ -175,17 +176,14 @@ class OtInterfaceBuilder:
         return obj
 
     def get_paramesters(self, obj: node.AddrmapNode | node.RegfileNode) -> [dict]:
-        """Parse the custom property localparams and return a list of  dictionaries.
-        """
-        res = [
+        """Parse the custom property localparams and return a list of  dictionaries."""
+        return [
             {"name": param.name, "type": "int", "value": param.get_value()}
             for param in obj.inst.parameters
         ]
-        return res
 
     def get_interface(self, addrmap: node.AddrmapNode, defalt_name: None | str = None) -> dict:
-        """Parse an interface and return a dictionary.
-        """
+        """Parse an interface and return a dictionary."""
         self.num_regs = 0
         self.num_windows = 0
         self.any_async_clk = False
@@ -196,7 +194,7 @@ class OtInterfaceBuilder:
         if addrmap.is_array:
             print(f"WARNING: Unsupported array type: {type(addrmap)}, skiping...")
 
-        interface = dict()
+        interface = {}
         if defalt_name:
             interface["name"] = addrmap.inst_name or defalt_name
 
@@ -233,21 +231,20 @@ class OtInterfaceBuilder:
         interface["all_async_clk"] = self.all_async_clk
         interface["any_shadowed_reg"] = self.any_shadowed_reg
         interface["any_integrity_bypass"] = any(
-            [win["integrity_bypass"] for win in interface["windows"]]
+            win["integrity_bypass"] for win in interface["windows"]
         )
         return interface
 
     def parse_root(self, root: node.AddrmapNode) -> dict:
-        """Parse the root node and return a dictionary representing a window.
-        """
+        """Parse the root node and return a dictionary representing a window."""
         if root.is_array:
             print("Error: Unsupported array type on the top")
             raise RuntimeError
         if not isinstance(root, node.AddrmapNode):
             print("Error: Top level must be an addrmap")
-            raise RuntimeError
+            raise TypeError
 
-        obj = dict()
+        obj = {}
         params = self.get_paramesters(root)
         if params:
             obj["parameters"] = params
@@ -263,10 +260,10 @@ class OtInterfaceBuilder:
                 continue
             else:
                 print(
-                    f"""Error: Unsupported type: {type(child)}, top level only supports 
+                    f"""Error: Unsupported type: {type(child)}, top level only supports
                       addrmap and reg components."""
                 )
-                raise RuntimeError
+                raise TypeError
 
         # If the root contain imediate registers, use a default interface name
         if len(root.registers()) > 0:

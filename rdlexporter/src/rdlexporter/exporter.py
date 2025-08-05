@@ -2,6 +2,8 @@
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
 
+"""Exports rdl files."""
+
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -16,6 +18,8 @@ from systemrdl.rdltypes.user_enum import UserEnumMeta
 
 @dataclass
 class RdlExporter:
+    """Exports rdl files from AST."""
+
     rdlc: RDLCompiler
     stream: str = ""
     indent_pos = 0
@@ -24,7 +28,7 @@ class RdlExporter:
     dynamic_assignment: dict[str, list[dict]] = field(default_factory=dict)
     ast_path: list[str] = field(default_factory=list)
 
-    def _raise_type_error(self, type_name):
+    def _raise_type_error(self, type_name: str) -> None:
         print(f"Error: Unsupported type: {type_name} at this level only supports")
         raise RuntimeError
 
@@ -93,7 +97,7 @@ class RdlExporter:
             elif isinstance(obj, InstRef):
                 # This should be emited at a higher scope indicated by `ref_root._scope_name`.
                 ref = obj.get_value()
-                scope = ref.ref_root._scope_name or ref.ref_root.type_name
+                scope = ref.ref_root._scope_name or ref.ref_root.type_name  # noqa: SLF001
                 self.dynamic_assignment.setdefault(scope.lower(), []).append(
                     {
                         "property": name,
@@ -115,9 +119,9 @@ class RdlExporter:
         if len(component.array_dimensions) > 1:
             print("Error: Unsupported multidimentional arrays.")
             raise RuntimeError
+
         dim = self._get_register_array_dim(component)
-        array_str = f"[{dim}]"
-        return array_str
+        return f"[{dim}]"
 
     def _emit_parameters(self, parameters: list) -> None:
         if not len(parameters):
@@ -209,6 +213,7 @@ class RdlExporter:
         self.ast_path.pop()
 
     def export(self, outfile: Path) -> None:
+        """Export the SystemRDL ast to an RDL file."""
         self.ast_path.append(str(self.rdlc.root.inst_name))
         for name, component in self.rdlc.root.comp_defs.items():
             if isinstance(component, Addrmap):
