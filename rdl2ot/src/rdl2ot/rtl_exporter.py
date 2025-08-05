@@ -206,6 +206,10 @@ class OtInterfaceBuilder:
             if isinstance(child, node.RegNode):
                 child_obj = self.get_reg(child)
                 interface["regs"].append(child_obj)
+            elif isinstance(child, node.RegfileNode):
+                for reg in child.children():
+                    child_obj = self.get_reg(reg)
+                    interface["regs"].append(child_obj)
             elif isinstance(child, node.MemNode):
                 child_obj = self.get_mem(child)
                 interface["windows"].append(child_obj)
@@ -257,7 +261,7 @@ class OtInterfaceBuilder:
             if isinstance(child, node.AddrmapNode):
                 child_obj = self.get_interface(child, DEFAULT_INTERFACE_NAME)
                 obj["interfaces"].append(child_obj)
-            elif isinstance(child, node.RegNode | node.MemNode):
+            elif isinstance(child, node.RegNode | node.MemNode | node.RegfileNode):
                 continue
             else:
                 print(
