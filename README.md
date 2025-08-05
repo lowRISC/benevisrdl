@@ -18,6 +18,8 @@ nix develop
 ## rdl2ot cli tool
 A PeakRDL extension to generate Opentitan style source files from SystemRDL files.
 
+For more details, refer to [rdl2ot](./rdl2ot)
+
 ### How to run tests
 ```sh
 cd rdl2ot
@@ -32,6 +34,8 @@ python src/rdl2ot export-rtl tests/snapshots/lc_ctrl.rdl /tmp/
 
 ## Rdl-exporter
 A library to generate SystemRDL files from the Hierarchical Register Model.
+
+For more details, refer to [rdlexporter](./rdlexporter)
 
 ### How to run tests
 ```sh
