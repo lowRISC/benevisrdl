@@ -33,6 +33,5 @@ jobs:
       run: uv run pytest        
       working-directory: rdlexporter
 
-    - name: Build rdlexporter package 
-      run: uv run python -m build        
-      working-directory: rdlexporter
+    - name: Build packages 
+      run: uv build --all        
