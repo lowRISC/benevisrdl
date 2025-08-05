@@ -9,8 +9,9 @@
 from pathlib import Path
 
 import click
-import export_rtl as rtl_exporter
 from systemrdl import RDLCompiler
+
+from rdl2ot import rtl_exporter
 
 
 @click.group()

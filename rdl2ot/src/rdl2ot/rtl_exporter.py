@@ -7,12 +7,13 @@
 import json
 from pathlib import Path
 
-import opentitan
 from jinja2 import Environment, FileSystemLoader
 from systemrdl import RDLCompiler, node
 from systemrdl.rdltypes import OnReadType
 
-TEMPLATES_DIR = "./src/templates"
+from rdl2ot import opentitan
+
+TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
 DEFAULT_INTERFACE_NAME = "regs"
 
 
