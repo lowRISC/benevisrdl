@@ -1,5 +1,5 @@
-# BenevisRdl
-This repository will house PeakRdl plugins, named after Ben Nevis, the UK's tallest peak.
+# BenevisRDL
+This repository will house PeakRDL plugins, named after Ben Nevis, the UK's tallest peak.
 
 ## Installing dependencies
 ### Using uv on macOS and Linux
@@ -16,7 +16,7 @@ nix develop
 ```
 
 ## rdl2ot cli tool
-A PeakRDL extension to generate Opentitan style source files from SystemRDL files.
+A PeakRDL extension to generate OpenTitan register block SystemVerilog from SystemRDL files.
 
 For more details, refer to [rdl2ot](./rdl2ot)
 
@@ -26,20 +26,20 @@ cd rdl2ot
 pytest
 ```
 
-### How to generate the Opentitan register interfaces from a RDL file
+### How to generate the OpenTitan register interfaces from a RDL file
 ```sh
 cd rdl2ot
 python src/rdl2ot export-rtl tests/snapshots/lc_ctrl.rdl /tmp/
 ```
 
-## Rdl-exporter
+## rdlexporter
 A library to generate SystemRDL files from the Hierarchical Register Model.
 
 For more details, refer to [rdlexporter](./rdlexporter)
 
 ### How to run tests
 ```sh
-cd rdl-exporter
+cd rdlexporter
 pytest
 ```
 

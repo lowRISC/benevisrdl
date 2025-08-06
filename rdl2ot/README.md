@@ -1,8 +1,8 @@
 # rdl2ot cli tool
-A PeakRDL extension to generate Opentitan style source files from SystemRDL files.
+A PeakRDL extension to generate OpenTitan register block SystemVerilog from SystemRDL files.
 
 ## Using as a standalone tool
-### How to generate the Opentitan register interfaces from a RDL file
+### How to generate the OpenTitan register interfaces from a RDL file
 ```sh
 rdl2ot export-rtl <input_rdl> <output_dir>
 ```
@@ -13,7 +13,7 @@ mkdir -p /tmp/lc_ctrl
 rdl2ot export-rtl tests/snapshots/lc_ctrl.rdl /tmp/lc_ctrl/
 ```
 
-## Using as a Peakrdl pluggin 
+## Using as a PeakRDL pluggin 
 ### Installing
 ```sh
 pip install peakrdl rdl2ot

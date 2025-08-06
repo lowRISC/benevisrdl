@@ -45,7 +45,7 @@ def run(root_node: node.AddrmapNode, out_dir: Path) -> None:
 
 
 class OtInterfaceBuilder:
-    """Opentitan Interface Builder."""
+    """OpenTitan Interface Builder."""
 
     num_regs: int = 0  # The number of registers of an interface
     num_windows: int = 0  # The number of registers of an interface
