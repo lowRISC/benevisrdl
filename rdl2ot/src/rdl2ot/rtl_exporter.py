@@ -17,10 +17,10 @@ TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
 DEFAULT_INTERFACE_NAME = "regs"
 
 
-def run(obj: node.RootNode, out_dir: Path) -> None:
+def run(root_node: node.AddrmapNode, out_dir: Path) -> None:
     """Export RDL to opentitan RTL."""
     factory = OtInterfaceBuilder()
-    data = factory.parse_root(obj.top)
+    data = factory.parse_root(root_node)
 
     Path(out_dir / "rdl.json").write_text(json.dumps(data, indent=2), encoding="utf-8")
 
