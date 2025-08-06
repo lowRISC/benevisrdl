@@ -3,9 +3,38 @@ name = "rdl2ot"
 version = "0.1.0"
 description = "An extension of PeakRDL to generate Opentitan RTL."
 requires-python = ">=3.10"
+keywords = ["SystemRDL", "Opentitan", "Codegen"]
+readme = "README.md"
 dependencies = [
+  "click>=8.2.1",
+  "jinja2>=3.1.6",
+  "peakrdl>=1.4.0",
 ]
+
+authors = [
+    { name = "lowRISC contributors"},
+]
+
+[project.scripts]
+rdl2ot = "rdl2ot.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/lowrisc/benevisrdl"
+Issues = "https://github.com/lowrisc/benevisrdl/issues"
+Documentation = "https://github.com/lowrisc/benevisrdl"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.pyright]
+include = ["src"]
+reportMissingImports = "error"
+reportMissingTypeStubs = false
+venv = ".venv"
+executionEnvironments = [
+    { root = "src" },
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/rdl2ot", "src/templates"]

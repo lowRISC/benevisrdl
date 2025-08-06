@@ -1,29 +1,22 @@
 [project]
 name = "benevisrdl"
-version = "0.0.0"
+version = "0.1.0"
 description = "Houses PeakRDL pluggins."
 requires-python = ">=3.10"
-readme = "README.md"        # Path to your README file
-license = { file = "LICENSE" } # Path to your LICENSE file
+readme = "README.md"      
+license = { file = "LICENSE" }
 dependencies = [
-  "uv==0.6.1",
-  "isort==5.10.1",
-  "yapf==0.32.0",
-  "click>=8.2.1",
-  "jinja2>=3.1.6",
-  "peakrdl>=1.4.0",
 ]
+
 [project.optional-dependencies]
 linting = [
+  "pyright>=1.1.403",
   "ruff>=0.9.6",
-  "mypy==0.971",
-  "flake8 ~= 7.1",
 ]
 dev = [
   "pytest>=8.4.1",
-  "hatch>=1.4.1",
   "twine>=6.1.0",
-  "build>=1.2.2",
+  "uv-build>=0.8.4",
 ]
 ci = ["benevisrdl[linting,dev]"]
 
@@ -33,11 +26,25 @@ py-modules = []
 [tool.ruff]
 target-version = "py310"
 line-length = 100
+extend-exclude = [
+]
 
 [tool.ruff.lint]
 preview = true
 explicit-preview-rules = true
-extend-select = ["E", "E303", "W391"]
+select = ["ALL"]
+extend-select = ["W391", "E303"]
+allowed-confusables = ["−"]
+ignore = [
+    "D203", "D213", "COM812", "ISC001", "FIX", "TD", "T201", "S101", "C901", "D401",
+    "PLR0911", "PLR0915", "INP001", "RUF012", "EXE001", "S701"
+]
 
 [tool.uv.workspace]
 members = [ "rdl2ot", "rdlexporter"]
+
+[[tool.uv.index]]
+name = "testpypi"
+url = "https://test.pypi.org/simple/"
+publish-url = "https://test.pypi.org/legacy/"
+explicit = true

@@ -2,15 +2,19 @@
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
 
-from pathlib import Path
-import sys
+"""Tests."""
+
 import subprocess
+import sys
+from pathlib import Path
+
+import pytest
 
 CLI_TOOL_PATH = Path(__file__).parent.parent / "src/rdl2ot"
 SNAPSHOTS_DIR = Path(__file__).parent / "snapshots"
 
 
-def run_cli_tool(input_file_path: Path, output_dir_path: Path):
+def _run_cli_tool(input_file_path: Path, output_dir_path: Path) -> subprocess.CompletedProcess:
     command = [
         sys.executable,  # Use the current Python interpreter
         str(CLI_TOOL_PATH),
@@ -18,13 +22,14 @@ def run_cli_tool(input_file_path: Path, output_dir_path: Path):
         str(input_file_path),
         str(output_dir_path),
     ]
-    result = subprocess.run(command, capture_output=True, text=True, check=False)
-    return result
+    return subprocess.run(command, capture_output=True, text=True, check=False)  # noqa: S603
 
-
-def run_ip_test(tmp_path: Path, ip_block: str):
+test_ips = ["lc_ctrl", "uart"]
+@pytest.mark.parametrize("ip_block", test_ips)
+def test_export_ip(tmp_path: Path, ip_block: str) -> None:
+    """Test an given ip block."""
     input_rdl = SNAPSHOTS_DIR / f"{ip_block}.rdl"
-    cli_result = run_cli_tool(input_rdl, tmp_path)
+    cli_result = _run_cli_tool(input_rdl, tmp_path)
     assert cli_result.returncode == 0, f"CLI exited with error: {cli_result.stderr}"
     assert "Successfully finished!" in cli_result.stdout  # Check for success message
 
@@ -36,11 +41,3 @@ def run_ip_test(tmp_path: Path, ip_block: str):
         assert actual_output_content == snapshot_content, (
             f"Output mismatch, to debug, run:\nmeld {outfile} {snapshot_file}\n"
         )
-
-
-def test_cli_lc_ctrl(tmp_path: Path):
-    run_ip_test(tmp_path, "lc_ctrl")
-
-
-def test_cli_uart(tmp_path: Path):
-    run_ip_test(tmp_path, "uart")

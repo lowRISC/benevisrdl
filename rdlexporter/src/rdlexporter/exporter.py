@@ -2,19 +2,24 @@
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
 
+"""Exports rdl files."""
+
+from dataclasses import dataclass, field
 from pathlib import Path
+
 from systemrdl import RDLCompiler
+from systemrdl.ast.cast import AssignmentCast
+from systemrdl.ast.literals import BoolLiteral, BuiltinEnumLiteral, IntLiteral, StringLiteral
+from systemrdl.ast.references import InstRef
+from systemrdl.component import AddressableComponent, Addrmap, Field, Mem, Reg
 from systemrdl.rdltypes import AccessType, OnReadType, OnWriteType
 from systemrdl.rdltypes.user_enum import UserEnumMeta
-from systemrdl.ast.literals import StringLiteral, BoolLiteral, IntLiteral, BuiltinEnumLiteral
-from systemrdl.ast.cast import AssignmentCast
-from systemrdl.ast.references import InstRef
-from systemrdl.component import Addrmap, Reg, Field, Mem, AddressableComponent
-from dataclasses import dataclass, field
 
 
 @dataclass
 class RdlExporter:
+    """Exports rdl files from AST."""
+
     rdlc: RDLCompiler
     stream: str = ""
     indent_pos = 0
@@ -23,7 +28,7 @@ class RdlExporter:
     dynamic_assignment: dict[str, list[dict]] = field(default_factory=dict)
     ast_path: list[str] = field(default_factory=list)
 
-    def _raise_type_error(self, type_name):
+    def _raise_type_error(self, type_name: str) -> None:
         print(f"Error: Unsupported type: {type_name} at this level only supports")
         raise RuntimeError
 
@@ -42,9 +47,9 @@ class RdlExporter:
 
     def _get_offset(self, comp: AddressableComponent) -> str:
         if isinstance(comp.addr_offset, AssignmentCast):
-            return " @ 0x{:X}".format(comp.addr_offset.get_value())
+            return f" @ 0x{comp.addr_offset.get_value():X}"
         if isinstance(comp.addr_offset, int):
-            return " @ 0x{:X}".format(comp.addr_offset)
+            return f" @ 0x{comp.addr_offset:X}"
         return ""
 
     def _get_register_array_dim(self, reg: Reg) -> int:
@@ -92,7 +97,7 @@ class RdlExporter:
             elif isinstance(obj, InstRef):
                 # This should be emited at a higher scope indicated by `ref_root._scope_name`.
                 ref = obj.get_value()
-                scope = ref.ref_root._scope_name or ref.ref_root.type_name
+                scope = ref.ref_root._scope_name or ref.ref_root.type_name  # noqa: SLF001
                 self.dynamic_assignment.setdefault(scope.lower(), []).append(
                     {
                         "property": name,
@@ -114,9 +119,9 @@ class RdlExporter:
         if len(component.array_dimensions) > 1:
             print("Error: Unsupported multidimentional arrays.")
             raise RuntimeError
+
         dim = self._get_register_array_dim(component)
-        array_str = f"[{dim}]"
-        return array_str
+        return f"[{dim}]"
 
     def _emit_parameters(self, parameters: list) -> None:
         if not len(parameters):
@@ -208,6 +213,7 @@ class RdlExporter:
         self.ast_path.pop()
 
     def export(self, outfile: Path) -> None:
+        """Export the SystemRDL ast to an RDL file."""
         self.ast_path.append(str(self.rdlc.root.inst_name))
         for name, component in self.rdlc.root.comp_defs.items():
             if isinstance(component, Addrmap):
