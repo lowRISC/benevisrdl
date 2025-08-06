@@ -41,6 +41,6 @@ def export_rtl(input_file: str, out_dir: str) -> None:
     rdlc.compile_file(input_file)
     root = rdlc.elaborate()
 
-    rtl_exporter.run(rdlc, root, Path(out_dir))
+    rtl_exporter.run(root, Path(out_dir))
 
     print("Successfully finished!\n")
