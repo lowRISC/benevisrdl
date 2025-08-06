@@ -1,4 +1,4 @@
-# rdl-exporter
+# rdlexporter
 A library to generate SystemRDL files from the Hierarchical Register Model.
 
 How to use it: 

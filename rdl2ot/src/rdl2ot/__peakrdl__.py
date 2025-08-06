@@ -3,7 +3,7 @@
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
 
-"""Generates Opentitan regblock RTL."""
+"""Generates OpenTitan regblock RTL."""
 
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -19,9 +19,9 @@ if TYPE_CHECKING:
 
 
 class Exporter(ExporterSubcommandPlugin):
-    """Generates Opentitan regblock RTL."""
+    """Generates OpenTitan regblock RTL."""
 
-    short_desc = "Generates Opentitan register block RTL."
+    short_desc = "Generates OpenTitan register block RTL."
 
     def add_exporter_arguments(self, arg_group: "argparse.ArgumentParser") -> None:
         """No extra arguments."""
