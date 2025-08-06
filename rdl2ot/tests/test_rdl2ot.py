@@ -24,7 +24,10 @@ def _run_cli_tool(input_file_path: Path, output_dir_path: Path) -> subprocess.Co
     ]
     return subprocess.run(command, capture_output=True, text=True, check=False)  # noqa: S603
 
+
 test_ips = ["lc_ctrl", "uart"]
+
+
 @pytest.mark.parametrize("ip_block", test_ips)
 def test_export_ip(tmp_path: Path, ip_block: str) -> None:
     """Test an given ip block."""

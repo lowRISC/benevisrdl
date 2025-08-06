@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
-from systemrdl import RDLCompiler, node
+from systemrdl import node
 from systemrdl.rdltypes import OnReadType
 
 from rdl2ot import opentitan
@@ -17,10 +17,10 @@ TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
 DEFAULT_INTERFACE_NAME = "regs"
 
 
-def run(rdlc: RDLCompiler, obj: node.RootNode, out_dir: Path) -> None:
+def run(root_node: node.AddrmapNode, out_dir: Path) -> None:
     """Export RDL to opentitan RTL."""
-    factory = OtInterfaceBuilder(rdlc)
-    data = factory.parse_root(obj.top)
+    factory = OtInterfaceBuilder()
+    data = factory.parse_root(root_node)
 
     Path(out_dir / "rdl.json").write_text(json.dumps(data, indent=2), encoding="utf-8")
 
@@ -54,11 +54,6 @@ class OtInterfaceBuilder:
     async_registers: list = [(int, str)]  # List of all the (index, register) with async clock
     any_shadowed_reg: bool = False
     reg_index: int = 0
-    rdlc: RDLCompiler
-
-    def __init__(self, rdlc: RDLCompiler) -> None:
-        """Constructor."""
-        self.rdlc = rdlc
 
     def get_field(self, field: node.FieldNode) -> dict:
         """Parse a field and return a dictionary."""
