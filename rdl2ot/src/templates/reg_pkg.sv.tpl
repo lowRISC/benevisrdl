@@ -25,6 +25,17 @@ package {{ ip_name }}_reg_pkg;
   parameter int NumRegs{{ interface.name|title }} = {{ interface.num_regs }};
 {%- endfor %}
 
+
+{%- if alerts|length > 0 %}
+
+  // Alert indices
+  typedef enum int {
+{%- for alert in alerts %}
+    Alert{{ alert | camelcase  }}Idx = {{ loop.index0 }}{{ "," if not loop.last }}
+{%- endfor %}
+  } {{ ip_name | lower }}_alert_idx_t;
+{%- endif %}
+
 {%- for interface in interfaces %}
   {%- set registers = interface.regs %}
   {%- set interface_name = ("_" + interface.name)|lower if interface.name %}

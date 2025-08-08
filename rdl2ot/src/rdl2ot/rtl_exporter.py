@@ -17,6 +17,11 @@ TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
 DEFAULT_INTERFACE_NAME = "regs"
 
 
+def _camelcase(value: str) -> str:
+    words = value.split("_")
+    return "".join(word.capitalize() for word in words)
+
+
 def run(root_node: node.AddrmapNode, out_dir: Path) -> None:
     """Export RDL to opentitan RTL."""
     factory = OtInterfaceBuilder()
@@ -26,6 +31,7 @@ def run(root_node: node.AddrmapNode, out_dir: Path) -> None:
 
     file_loader = FileSystemLoader(TEMPLATES_DIR)
     env = Environment(loader=file_loader)
+    env.filters["camelcase"] = _camelcase
 
     ip_name = data["ip_name"]
     reg_pkg_tpl = env.get_template("reg_pkg.sv.tpl")
@@ -233,6 +239,12 @@ class OtInterfaceBuilder:
         interface["any_integrity_bypass"] = any(
             win["integrity_bypass"] for win in interface["windows"]
         )
+        interface["alerts"] = [
+            f["name"]
+            for reg in interface["regs"]
+            for f in reg["fields"]
+            if reg["name"] == "ALERT_TEST"
+        ]
         return interface
 
     def parse_root(self, root: node.AddrmapNode) -> dict:
@@ -252,10 +264,12 @@ class OtInterfaceBuilder:
         obj["offset"] = root.address_offset
 
         obj["interfaces"] = []
+        obj["alerts"] = []
         for child in root.children():
             if isinstance(child, node.AddrmapNode):
                 child_obj = self.get_interface(child, DEFAULT_INTERFACE_NAME)
                 obj["interfaces"].append(child_obj)
+                obj["alerts"].extend(child_obj["alerts"])
             elif isinstance(child, node.RegNode | node.MemNode | node.RegfileNode):
                 continue
             else:
@@ -269,5 +283,6 @@ class OtInterfaceBuilder:
         if len(root.registers()) > 0:
             interface = self.get_interface(root)
             obj["interfaces"].append(interface)
+            obj["alerts"].extend(interface["alerts"])
 
         return obj
