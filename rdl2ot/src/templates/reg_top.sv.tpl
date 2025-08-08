@@ -35,7 +35,6 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
 {%- endif %}
 
 {%- if has_regs %}
-
   // To HW
   output {{ ip_name|lower }}_reg_pkg::{{ ip_name|lower }}{{interface_name}}_reg2hw_t reg2hw, // Write
   input  {{ ip_name|lower }}_reg_pkg::{{ ip_name|lower }}{{interface_name}}_hw2reg_t hw2reg, // Read
@@ -174,9 +173,11 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
 {%- set num_dsp = (interface.num_regs > 0)|int + interface.num_windows %}
 {%- if (num_dsp) <= 1 %}
   {%- if interface.num_windows == 0 %}
+
   assign tl_reg_h2d = tl_i;
   assign tl_o_pre   = tl_reg_d2h;
   {%- else %}
+
   assign tl_win_o = tl_i;
   assign tl_o_pre = tl_win_i;
   {%- endif %}
@@ -413,12 +414,13 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
 {%- endif %}
 
 {%- if has_regs %}
-{{- space }}
+{{ space }}
   // Register instances
 {%- endif %}
 
 {%- set assign = namespace(expr="") %}
 {%- for reg in registers  %}
+{{- space }}
   {%- for offset in reg.offsets %}
     {%- set multireg_idx = loop.index0 if reg.is_multireg %}
     {%- set multireg_suffix = "_{}".format(multireg_idx) if reg.offsets|length > 1 %}
@@ -442,8 +444,9 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
   logic unused_{{ reg.name|lower }}_flds_we;
   assign unused_{{ reg.name|lower }}_flds_we = {{ "^({}_flds_we & {}'h{:x})".format(reg.name|lower, reg.fields|length, reg.fields_no_write_en ) }};
       {%- endif %}
-      {%- set opt_expr = " | {}'h{:x}".format(reg.fields|length, reg.fields_no_write_en ) if reg.fields_no_write_en > 0 %}
-  assign {{regname }}_qe = &{{ "({}_flds_we{})".format(regname, opt_expr) }};
+      {%- set right_expr = "{}_flds_we".format(regname) %}
+      {%- set right_expr = right_expr ~ (" | {}'h{:x}".format(reg.fields|length, reg.fields_no_write_en ) if reg.fields_no_write_en > 0) %}
+  assign {{regname }}_qe = &{{ "({})".format(right_expr) if reg.fields_no_write_en > 0 else "{}".format(right_expr) }};
       {%- else %}
   prim_flop #(
     .Width(1),
@@ -482,7 +485,7 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
   //   F{{ '[{}{}]: {}:{}'.format(field.name, multireg_suffix, field.msb, field.lsb)|lower }}
       {%- endif %}
   prim_subreg{{ '_ext' if reg.external else ('_shadow' if reg.shadowed) }} #(
-    .DW      ({{ field.width }})
+    .DW    ({{ field.width }})
       {%- if not reg.external -%}
     ,
     .SwAccess(prim_subreg_pkg::SwAccess{{ field.reggen_sw_access }}),
@@ -539,8 +542,8 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
 {{- space }}
 {{ space }}
     {%- endfor %}
+{{ space }}
   {%- endfor %}
-{{ space }}  
 {%- endfor %}
 
 {%- if has_regs %}
@@ -569,7 +572,7 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
     {%- for offset in reg.offsets %}
       {%- set index = "{num:>{width}}".format(num=ns.counter, width=num_regs_digits) %}
       {%- set ns.counter = ns.counter + 1 %}
-      {%- if loop.first and outer_loop.first -%} ( {%- endif %}
+              {{"(" if loop.first and outer_loop.first else " " -}}
                (addr_hit[{{ index }}] & (|({{ (ip_name ~ interface_name)|upper}}_PERMIT[{{ index }}] & ~reg_be))) 
       {%- if loop.last and outer_loop.last %}));{% else %} |{% endif %}
     {%- endfor %}

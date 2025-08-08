@@ -11,7 +11,6 @@ module uart_reg_top (
   input rst_ni,
   input  tlul_pkg::tl_h2d_t tl_i,
   output tlul_pkg::tl_d2h_t tl_o,
-
   // To HW
   output uart_reg_pkg::uart_reg2hw_t reg2hw, // Write
   input  uart_reg_pkg::uart_hw2reg_t hw2reg, // Read
@@ -86,6 +85,7 @@ module uart_reg_top (
     .tl_i(tl_o_pre),
     .tl_o(tl_o)
   );
+
   assign tl_reg_h2d = tl_i;
   assign tl_o_pre   = tl_reg_d2h;
 
@@ -216,11 +216,12 @@ module uart_reg_top (
   logic [23:0] timeout_ctrl_val_wd;
   logic timeout_ctrl_en_qs;
   logic timeout_ctrl_en_wd;
+
   // Register instances
   // R[interrupt_state]: V(False)
   //   F[tx_watermark]: 0:0
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessW1C),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
@@ -239,7 +240,7 @@ module uart_reg_top (
 
   //   F[rx_watermark]: 1:1
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessW1C),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
@@ -258,7 +259,7 @@ module uart_reg_top (
 
   //   F[tx_empty]: 2:2
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessW1C),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
@@ -277,7 +278,7 @@ module uart_reg_top (
 
   //   F[rx_overflow]: 3:3
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessW1C),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
@@ -296,7 +297,7 @@ module uart_reg_top (
 
   //   F[rx_frame_err]: 4:4
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessW1C),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
@@ -315,7 +316,7 @@ module uart_reg_top (
 
   //   F[rx_break_err]: 5:5
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessW1C),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
@@ -334,7 +335,7 @@ module uart_reg_top (
 
   //   F[rx_timeout]: 6:6
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessW1C),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
@@ -353,7 +354,7 @@ module uart_reg_top (
 
   //   F[rx_parity_err]: 7:7
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessW1C),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
@@ -374,7 +375,7 @@ module uart_reg_top (
   // R[interrupt_enable]: V(False)
   //   F[tx_watermark]: 0:0
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessW1C),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
@@ -393,7 +394,7 @@ module uart_reg_top (
 
   //   F[rx_watermark]: 1:1
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessW1C),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
@@ -412,7 +413,7 @@ module uart_reg_top (
 
   //   F[tx_empty]: 2:2
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessW1C),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
@@ -431,7 +432,7 @@ module uart_reg_top (
 
   //   F[rx_overflow]: 3:3
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessW1C),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
@@ -450,7 +451,7 @@ module uart_reg_top (
 
   //   F[rx_frame_err]: 4:4
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessW1C),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
@@ -469,7 +470,7 @@ module uart_reg_top (
 
   //   F[rx_break_err]: 5:5
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessW1C),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
@@ -488,7 +489,7 @@ module uart_reg_top (
 
   //   F[rx_timeout]: 6:6
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessW1C),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
@@ -507,7 +508,7 @@ module uart_reg_top (
 
   //   F[rx_parity_err]: 7:7
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessW1C),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
@@ -528,7 +529,7 @@ module uart_reg_top (
   // R[interrupt_test]: V(False)
   //   F[tx_watermark]: 0:0
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessWO),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
@@ -547,7 +548,7 @@ module uart_reg_top (
 
   //   F[rx_watermark]: 1:1
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessWO),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
@@ -566,7 +567,7 @@ module uart_reg_top (
 
   //   F[tx_empty]: 2:2
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessWO),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
@@ -585,7 +586,7 @@ module uart_reg_top (
 
   //   F[rx_overflow]: 3:3
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessWO),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
@@ -604,7 +605,7 @@ module uart_reg_top (
 
   //   F[rx_frame_err]: 4:4
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessWO),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
@@ -623,7 +624,7 @@ module uart_reg_top (
 
   //   F[rx_break_err]: 5:5
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessWO),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
@@ -642,7 +643,7 @@ module uart_reg_top (
 
   //   F[rx_timeout]: 6:6
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessWO),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
@@ -661,7 +662,7 @@ module uart_reg_top (
 
   //   F[rx_parity_err]: 7:7
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessWO),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
@@ -681,7 +682,7 @@ module uart_reg_top (
 
   // R[alert_test]: V(False)
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessWO),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
@@ -702,7 +703,7 @@ module uart_reg_top (
   // R[ctrl]: V(False)
   //   F[tx]: 0:0
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessRW),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
@@ -721,7 +722,7 @@ module uart_reg_top (
 
   //   F[rx]: 1:1
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessRW),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
@@ -740,7 +741,7 @@ module uart_reg_top (
 
   //   F[nf]: 2:2
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessRW),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
@@ -759,7 +760,7 @@ module uart_reg_top (
 
   //   F[slpbk]: 4:4
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessRW),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
@@ -778,7 +779,7 @@ module uart_reg_top (
 
   //   F[llpbk]: 5:5
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessRW),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
@@ -797,7 +798,7 @@ module uart_reg_top (
 
   //   F[parity_en]: 6:6
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessRW),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
@@ -816,7 +817,7 @@ module uart_reg_top (
 
   //   F[parity_odd]: 7:7
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessRW),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
@@ -835,7 +836,7 @@ module uart_reg_top (
 
   //   F[rxblvl]: 9:8
   prim_subreg #(
-    .DW      (2),
+    .DW    (2),
     .SwAccess(prim_subreg_pkg::SwAccessRW),
     .RESVAL  (2'h0),
     .Mubi    (1'b0)
@@ -854,7 +855,7 @@ module uart_reg_top (
 
   //   F[nco]: 31:16
   prim_subreg #(
-    .DW      (16),
+    .DW    (16),
     .SwAccess(prim_subreg_pkg::SwAccessRW),
     .RESVAL  (16'h0),
     .Mubi    (1'b0)
@@ -875,7 +876,7 @@ module uart_reg_top (
   // R[status]: V(False)
   //   F[txfull]: 0:0
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessRO),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
@@ -894,7 +895,7 @@ module uart_reg_top (
 
   //   F[rxfull]: 1:1
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessRO),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
@@ -913,7 +914,7 @@ module uart_reg_top (
 
   //   F[txempty]: 2:2
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessRO),
     .RESVAL  (1'h1),
     .Mubi    (1'b0)
@@ -932,7 +933,7 @@ module uart_reg_top (
 
   //   F[txidle]: 3:3
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessRO),
     .RESVAL  (1'h1),
     .Mubi    (1'b0)
@@ -951,7 +952,7 @@ module uart_reg_top (
 
   //   F[rxidle]: 4:4
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessRO),
     .RESVAL  (1'h1),
     .Mubi    (1'b0)
@@ -970,7 +971,7 @@ module uart_reg_top (
 
   //   F[rxempty]: 5:5
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessRO),
     .RESVAL  (1'h1),
     .Mubi    (1'b0)
@@ -990,7 +991,7 @@ module uart_reg_top (
 
   // R[rdata]: V(False)
   prim_subreg #(
-    .DW      (8),
+    .DW    (8),
     .SwAccess(prim_subreg_pkg::SwAccessRO),
     .RESVAL  (8'h0),
     .Mubi    (1'b0)
@@ -1010,7 +1011,7 @@ module uart_reg_top (
 
   // R[wdata]: V(False)
   prim_subreg #(
-    .DW      (8),
+    .DW    (8),
     .SwAccess(prim_subreg_pkg::SwAccessWO),
     .RESVAL  (8'h0),
     .Mubi    (1'b0)
@@ -1031,7 +1032,7 @@ module uart_reg_top (
   // R[fifo_ctrl]: V(False)
   //   F[rxrst]: 0:0
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessRW),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
@@ -1050,7 +1051,7 @@ module uart_reg_top (
 
   //   F[txrst]: 1:1
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessRW),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
@@ -1069,7 +1070,7 @@ module uart_reg_top (
 
   //   F[rxilvl]: 4:2
   prim_subreg #(
-    .DW      (3),
+    .DW    (3),
     .SwAccess(prim_subreg_pkg::SwAccessRW),
     .RESVAL  (3'h0),
     .Mubi    (1'b0)
@@ -1088,7 +1089,7 @@ module uart_reg_top (
 
   //   F[txilvl]: 6:5
   prim_subreg #(
-    .DW      (2),
+    .DW    (2),
     .SwAccess(prim_subreg_pkg::SwAccessRW),
     .RESVAL  (2'h0),
     .Mubi    (1'b0)
@@ -1109,7 +1110,7 @@ module uart_reg_top (
   // R[fifo_status]: V(False)
   //   F[txlvl]: 5:0
   prim_subreg #(
-    .DW      (6),
+    .DW    (6),
     .SwAccess(prim_subreg_pkg::SwAccessRO),
     .RESVAL  (6'h0),
     .Mubi    (1'b0)
@@ -1128,7 +1129,7 @@ module uart_reg_top (
 
   //   F[rxlvl]: 21:16
   prim_subreg #(
-    .DW      (6),
+    .DW    (6),
     .SwAccess(prim_subreg_pkg::SwAccessRO),
     .RESVAL  (6'h0),
     .Mubi    (1'b0)
@@ -1149,7 +1150,7 @@ module uart_reg_top (
   // R[ovrd]: V(False)
   //   F[txen]: 0:0
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessRW),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
@@ -1168,7 +1169,7 @@ module uart_reg_top (
 
   //   F[txval]: 1:1
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessRW),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
@@ -1188,7 +1189,7 @@ module uart_reg_top (
 
   // R[val]: V(False)
   prim_subreg #(
-    .DW      (16),
+    .DW    (16),
     .SwAccess(prim_subreg_pkg::SwAccessRO),
     .RESVAL  (16'h0),
     .Mubi    (1'b0)
@@ -1209,7 +1210,7 @@ module uart_reg_top (
   // R[timeout_ctrl]: V(False)
   //   F[val]: 23:0
   prim_subreg #(
-    .DW      (24),
+    .DW    (24),
     .SwAccess(prim_subreg_pkg::SwAccessRW),
     .RESVAL  (24'h0),
     .Mubi    (1'b0)
@@ -1228,7 +1229,7 @@ module uart_reg_top (
 
   //   F[en]: 31:31
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessRW),
     .RESVAL  (1'h0),
     .Mubi    (1'b0)
@@ -1268,8 +1269,8 @@ module uart_reg_top (
 
   // Check sub-word write is permitted
   always_comb begin
-    wr_err = (reg_we &(
-               (addr_hit[ 0] & (|(UART_PERMIT[ 0] & ~reg_be))) |
+    wr_err = (reg_we &
+              ((addr_hit[ 0] & (|(UART_PERMIT[ 0] & ~reg_be))) |
                (addr_hit[ 1] & (|(UART_PERMIT[ 1] & ~reg_be))) |
                (addr_hit[ 2] & (|(UART_PERMIT[ 2] & ~reg_be))) |
                (addr_hit[ 3] & (|(UART_PERMIT[ 3] & ~reg_be))) |

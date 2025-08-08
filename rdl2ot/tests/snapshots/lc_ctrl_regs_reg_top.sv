@@ -11,7 +11,6 @@ module lc_ctrl_regs_reg_top (
   input rst_ni,
   input  tlul_pkg::tl_h2d_t tl_i,
   output tlul_pkg::tl_d2h_t tl_o,
-
   // To HW
   output lc_ctrl_reg_pkg::lc_ctrl_regs_reg2hw_t reg2hw, // Write
   input  lc_ctrl_reg_pkg::lc_ctrl_regs_hw2reg_t hw2reg, // Read
@@ -86,6 +85,7 @@ module lc_ctrl_regs_reg_top (
     .tl_i(tl_o_pre),
     .tl_o(tl_o)
   );
+
   assign tl_reg_h2d = tl_i;
   assign tl_o_pre   = tl_reg_d2h;
 
@@ -225,14 +225,15 @@ module lc_ctrl_regs_reg_top (
   logic [31:0] manuf_state_6_qs;
   logic manuf_state_7_re;
   logic [31:0] manuf_state_7_qs;
+
   // Register instances
   // R[alert_test]: V(True)
   logic alert_test_qe;
   logic [2:0] alert_test_flds_we;
-  assign alert_test_qe = &(alert_test_flds_we);
+  assign alert_test_qe = &alert_test_flds_we;
   //   F[fatal_prog_error]: 0:0
   prim_subreg_ext #(
-    .DW      (1)
+    .DW    (1)
   ) u_alert_test_fatal_prog_error (
     .re     (1'b0),
     .we     (alert_test_we),
@@ -248,7 +249,7 @@ module lc_ctrl_regs_reg_top (
 
   //   F[fatal_state_error]: 1:1
   prim_subreg_ext #(
-    .DW      (1)
+    .DW    (1)
   ) u_alert_test_fatal_state_error (
     .re     (1'b0),
     .we     (alert_test_we),
@@ -264,7 +265,7 @@ module lc_ctrl_regs_reg_top (
 
   //   F[fatal_bus_integ_error]: 2:2
   prim_subreg_ext #(
-    .DW      (1)
+    .DW    (1)
   ) u_alert_test_fatal_bus_integ_error (
     .re     (1'b0),
     .we     (alert_test_we),
@@ -282,7 +283,7 @@ module lc_ctrl_regs_reg_top (
   // R[status]: V(True)
   //   F[initialized]: 0:0
   prim_subreg_ext #(
-    .DW      (1)
+    .DW    (1)
   ) u_status_initialized (
     .re     (status_re),
     .we     (1'b0),
@@ -297,7 +298,7 @@ module lc_ctrl_regs_reg_top (
 
   //   F[ready]: 1:1
   prim_subreg_ext #(
-    .DW      (1)
+    .DW    (1)
   ) u_status_ready (
     .re     (status_re),
     .we     (1'b0),
@@ -312,7 +313,7 @@ module lc_ctrl_regs_reg_top (
 
   //   F[ext_clock_switched]: 2:2
   prim_subreg_ext #(
-    .DW      (1)
+    .DW    (1)
   ) u_status_ext_clock_switched (
     .re     (status_re),
     .we     (1'b0),
@@ -327,7 +328,7 @@ module lc_ctrl_regs_reg_top (
 
   //   F[transition_successful]: 3:3
   prim_subreg_ext #(
-    .DW      (1)
+    .DW    (1)
   ) u_status_transition_successful (
     .re     (status_re),
     .we     (1'b0),
@@ -342,7 +343,7 @@ module lc_ctrl_regs_reg_top (
 
   //   F[transition_count_error]: 4:4
   prim_subreg_ext #(
-    .DW      (1)
+    .DW    (1)
   ) u_status_transition_count_error (
     .re     (status_re),
     .we     (1'b0),
@@ -357,7 +358,7 @@ module lc_ctrl_regs_reg_top (
 
   //   F[transition_error]: 5:5
   prim_subreg_ext #(
-    .DW      (1)
+    .DW    (1)
   ) u_status_transition_error (
     .re     (status_re),
     .we     (1'b0),
@@ -372,7 +373,7 @@ module lc_ctrl_regs_reg_top (
 
   //   F[token_error]: 6:6
   prim_subreg_ext #(
-    .DW      (1)
+    .DW    (1)
   ) u_status_token_error (
     .re     (status_re),
     .we     (1'b0),
@@ -387,7 +388,7 @@ module lc_ctrl_regs_reg_top (
 
   //   F[flash_rma_error]: 7:7
   prim_subreg_ext #(
-    .DW      (1)
+    .DW    (1)
   ) u_status_flash_rma_error (
     .re     (status_re),
     .we     (1'b0),
@@ -402,7 +403,7 @@ module lc_ctrl_regs_reg_top (
 
   //   F[otp_error]: 8:8
   prim_subreg_ext #(
-    .DW      (1)
+    .DW    (1)
   ) u_status_otp_error (
     .re     (status_re),
     .we     (1'b0),
@@ -417,7 +418,7 @@ module lc_ctrl_regs_reg_top (
 
   //   F[state_error]: 9:9
   prim_subreg_ext #(
-    .DW      (1)
+    .DW    (1)
   ) u_status_state_error (
     .re     (status_re),
     .we     (1'b0),
@@ -432,7 +433,7 @@ module lc_ctrl_regs_reg_top (
 
   //   F[bus_integ_error]: 10:10
   prim_subreg_ext #(
-    .DW      (1)
+    .DW    (1)
   ) u_status_bus_integ_error (
     .re     (status_re),
     .we     (1'b0),
@@ -447,7 +448,7 @@ module lc_ctrl_regs_reg_top (
 
   //   F[otp_partition_error]: 11:11
   prim_subreg_ext #(
-    .DW      (1)
+    .DW    (1)
   ) u_status_otp_partition_error (
     .re     (status_re),
     .we     (1'b0),
@@ -463,7 +464,7 @@ module lc_ctrl_regs_reg_top (
 
   // R[claim_transition_if_regwen]: V(False)
   prim_subreg #(
-    .DW      (1),
+    .DW    (1),
     .SwAccess(prim_subreg_pkg::SwAccessW0C),
     .RESVAL  (1'h1),
     .Mubi    (1'b0)
@@ -484,12 +485,12 @@ module lc_ctrl_regs_reg_top (
   // R[claim_transition_if]: V(True)
   logic claim_transition_if_qe;
   logic [0:0] claim_transition_if_flds_we;
-  assign claim_transition_if_qe = &(claim_transition_if_flds_we);
+  assign claim_transition_if_qe = &claim_transition_if_flds_we;
   // Create REGWEN-gated WE signal
   logic claim_transition_if_gated_we;
   assign claim_transition_if_gated_we = claim_transition_if_we & claim_transition_if_regwen_qs;
   prim_subreg_ext #(
-    .DW      (8)
+    .DW    (8)
   ) u_claim_transition_if (
     .re     (claim_transition_if_re),
     .we     (claim_transition_if_gated_we),
@@ -506,7 +507,7 @@ module lc_ctrl_regs_reg_top (
 
   // R[transition_regwen]: V(True)
   prim_subreg_ext #(
-    .DW      (1)
+    .DW    (1)
   ) u_transition_regwen (
     .re     (transition_regwen_re),
     .we     (1'b0),
@@ -523,12 +524,12 @@ module lc_ctrl_regs_reg_top (
   // R[transition_cmd]: V(True)
   logic transition_cmd_qe;
   logic [0:0] transition_cmd_flds_we;
-  assign transition_cmd_qe = &(transition_cmd_flds_we);
+  assign transition_cmd_qe = &transition_cmd_flds_we;
   // Create REGWEN-gated WE signal
   logic transition_cmd_gated_we;
   assign transition_cmd_gated_we = transition_cmd_we & transition_regwen_qs;
   prim_subreg_ext #(
-    .DW      (1)
+    .DW    (1)
   ) u_transition_cmd (
     .re     (1'b0),
     .we     (transition_cmd_gated_we),
@@ -546,13 +547,13 @@ module lc_ctrl_regs_reg_top (
   // R[transition_ctrl]: V(True)
   logic transition_ctrl_qe;
   logic [1:0] transition_ctrl_flds_we;
-  assign transition_ctrl_qe = &(transition_ctrl_flds_we);
+  assign transition_ctrl_qe = &transition_ctrl_flds_we;
   // Create REGWEN-gated WE signal
   logic transition_ctrl_gated_we;
   assign transition_ctrl_gated_we = transition_ctrl_we & transition_regwen_qs;
   //   F[ext_clock_en]: 0:0
   prim_subreg_ext #(
-    .DW      (1)
+    .DW    (1)
   ) u_transition_ctrl_ext_clock_en (
     .re     (transition_ctrl_re),
     .we     (transition_ctrl_gated_we),
@@ -568,7 +569,7 @@ module lc_ctrl_regs_reg_top (
 
   //   F[volatile_raw_unlock]: 1:1
   prim_subreg_ext #(
-    .DW      (1)
+    .DW    (1)
   ) u_transition_ctrl_volatile_raw_unlock (
     .re     (transition_ctrl_re),
     .we     (transition_ctrl_gated_we),
@@ -587,12 +588,12 @@ module lc_ctrl_regs_reg_top (
   // R[transition_token_0]: V(True)
   logic transition_token_0_qe;
   logic [0:0] transition_token_0_flds_we;
-  assign transition_token_0_qe = &(transition_token_0_flds_we);
+  assign transition_token_0_qe = &transition_token_0_flds_we;
   // Create REGWEN-gated WE signal
   logic transition_token_0_gated_we;
   assign transition_token_0_gated_we = transition_token_0_we & transition_regwen_qs;
   prim_subreg_ext #(
-    .DW      (32)
+    .DW    (32)
   ) u_transition_token_0 (
     .re     (transition_token_0_re),
     .we     (transition_token_0_gated_we),
@@ -606,16 +607,17 @@ module lc_ctrl_regs_reg_top (
   );
   assign reg2hw.transition_token[0].qe = transition_token_0_qe;
 
+
   // Subregister 1 of Multireg transition_token
   // R[transition_token_1]: V(True)
   logic transition_token_1_qe;
   logic [0:0] transition_token_1_flds_we;
-  assign transition_token_1_qe = &(transition_token_1_flds_we);
+  assign transition_token_1_qe = &transition_token_1_flds_we;
   // Create REGWEN-gated WE signal
   logic transition_token_1_gated_we;
   assign transition_token_1_gated_we = transition_token_1_we & transition_regwen_qs;
   prim_subreg_ext #(
-    .DW      (32)
+    .DW    (32)
   ) u_transition_token_1 (
     .re     (transition_token_1_re),
     .we     (transition_token_1_gated_we),
@@ -629,16 +631,17 @@ module lc_ctrl_regs_reg_top (
   );
   assign reg2hw.transition_token[1].qe = transition_token_1_qe;
 
+
   // Subregister 2 of Multireg transition_token
   // R[transition_token_2]: V(True)
   logic transition_token_2_qe;
   logic [0:0] transition_token_2_flds_we;
-  assign transition_token_2_qe = &(transition_token_2_flds_we);
+  assign transition_token_2_qe = &transition_token_2_flds_we;
   // Create REGWEN-gated WE signal
   logic transition_token_2_gated_we;
   assign transition_token_2_gated_we = transition_token_2_we & transition_regwen_qs;
   prim_subreg_ext #(
-    .DW      (32)
+    .DW    (32)
   ) u_transition_token_2 (
     .re     (transition_token_2_re),
     .we     (transition_token_2_gated_we),
@@ -652,16 +655,17 @@ module lc_ctrl_regs_reg_top (
   );
   assign reg2hw.transition_token[2].qe = transition_token_2_qe;
 
+
   // Subregister 3 of Multireg transition_token
   // R[transition_token_3]: V(True)
   logic transition_token_3_qe;
   logic [0:0] transition_token_3_flds_we;
-  assign transition_token_3_qe = &(transition_token_3_flds_we);
+  assign transition_token_3_qe = &transition_token_3_flds_we;
   // Create REGWEN-gated WE signal
   logic transition_token_3_gated_we;
   assign transition_token_3_gated_we = transition_token_3_we & transition_regwen_qs;
   prim_subreg_ext #(
-    .DW      (32)
+    .DW    (32)
   ) u_transition_token_3 (
     .re     (transition_token_3_re),
     .we     (transition_token_3_gated_we),
@@ -679,12 +683,12 @@ module lc_ctrl_regs_reg_top (
   // R[transition_target]: V(True)
   logic transition_target_qe;
   logic [0:0] transition_target_flds_we;
-  assign transition_target_qe = &(transition_target_flds_we);
+  assign transition_target_qe = &transition_target_flds_we;
   // Create REGWEN-gated WE signal
   logic transition_target_gated_we;
   assign transition_target_gated_we = transition_target_we & transition_regwen_qs;
   prim_subreg_ext #(
-    .DW      (30)
+    .DW    (30)
   ) u_transition_target (
     .re     (transition_target_re),
     .we     (transition_target_gated_we),
@@ -702,12 +706,12 @@ module lc_ctrl_regs_reg_top (
   // R[otp_vendor_test_ctrl]: V(True)
   logic otp_vendor_test_ctrl_qe;
   logic [0:0] otp_vendor_test_ctrl_flds_we;
-  assign otp_vendor_test_ctrl_qe = &(otp_vendor_test_ctrl_flds_we);
+  assign otp_vendor_test_ctrl_qe = &otp_vendor_test_ctrl_flds_we;
   // Create REGWEN-gated WE signal
   logic otp_vendor_test_ctrl_gated_we;
   assign otp_vendor_test_ctrl_gated_we = otp_vendor_test_ctrl_we & transition_regwen_qs;
   prim_subreg_ext #(
-    .DW      (32)
+    .DW    (32)
   ) u_otp_vendor_test_ctrl (
     .re     (otp_vendor_test_ctrl_re),
     .we     (otp_vendor_test_ctrl_gated_we),
@@ -724,7 +728,7 @@ module lc_ctrl_regs_reg_top (
 
   // R[otp_vendor_test_status]: V(True)
   prim_subreg_ext #(
-    .DW      (32)
+    .DW    (32)
   ) u_otp_vendor_test_status (
     .re     (otp_vendor_test_status_re),
     .we     (1'b0),
@@ -740,7 +744,7 @@ module lc_ctrl_regs_reg_top (
 
   // R[lc_state]: V(True)
   prim_subreg_ext #(
-    .DW      (30)
+    .DW    (30)
   ) u_lc_state (
     .re     (lc_state_re),
     .we     (1'b0),
@@ -756,7 +760,7 @@ module lc_ctrl_regs_reg_top (
 
   // R[lc_transition_cnt]: V(True)
   prim_subreg_ext #(
-    .DW      (5)
+    .DW    (5)
   ) u_lc_transition_cnt (
     .re     (lc_transition_cnt_re),
     .we     (1'b0),
@@ -772,7 +776,7 @@ module lc_ctrl_regs_reg_top (
 
   // R[lc_id_state]: V(True)
   prim_subreg_ext #(
-    .DW      (32)
+    .DW    (32)
   ) u_lc_id_state (
     .re     (lc_id_state_re),
     .we     (1'b0),
@@ -789,7 +793,7 @@ module lc_ctrl_regs_reg_top (
   // R[hw_revision0]: V(True)
   //   F[product_id]: 15:0
   prim_subreg_ext #(
-    .DW      (16)
+    .DW    (16)
   ) u_hw_revision0_product_id (
     .re     (hw_revision0_re),
     .we     (1'b0),
@@ -804,7 +808,7 @@ module lc_ctrl_regs_reg_top (
 
   //   F[silicon_creator_id]: 31:16
   prim_subreg_ext #(
-    .DW      (16)
+    .DW    (16)
   ) u_hw_revision0_silicon_creator_id (
     .re     (hw_revision0_re),
     .we     (1'b0),
@@ -821,7 +825,7 @@ module lc_ctrl_regs_reg_top (
   // R[hw_revision1]: V(True)
   //   F[revision_id]: 7:0
   prim_subreg_ext #(
-    .DW      (8)
+    .DW    (8)
   ) u_hw_revision1_revision_id (
     .re     (hw_revision1_re),
     .we     (1'b0),
@@ -836,7 +840,7 @@ module lc_ctrl_regs_reg_top (
 
   //   F[reserved]: 31:8
   prim_subreg_ext #(
-    .DW      (24)
+    .DW    (24)
   ) u_hw_revision1_reserved (
     .re     (hw_revision1_re),
     .we     (1'b0),
@@ -853,7 +857,7 @@ module lc_ctrl_regs_reg_top (
   // Subregister 0 of Multireg device_id
   // R[device_id_0]: V(True)
   prim_subreg_ext #(
-    .DW      (32)
+    .DW    (32)
   ) u_device_id_0 (
     .re     (device_id_0_re),
     .we     (1'b0),
@@ -866,10 +870,11 @@ module lc_ctrl_regs_reg_top (
     .qs     (device_id_0_qs)
   );
 
+
   // Subregister 1 of Multireg device_id
   // R[device_id_1]: V(True)
   prim_subreg_ext #(
-    .DW      (32)
+    .DW    (32)
   ) u_device_id_1 (
     .re     (device_id_1_re),
     .we     (1'b0),
@@ -882,10 +887,11 @@ module lc_ctrl_regs_reg_top (
     .qs     (device_id_1_qs)
   );
 
+
   // Subregister 2 of Multireg device_id
   // R[device_id_2]: V(True)
   prim_subreg_ext #(
-    .DW      (32)
+    .DW    (32)
   ) u_device_id_2 (
     .re     (device_id_2_re),
     .we     (1'b0),
@@ -898,10 +904,11 @@ module lc_ctrl_regs_reg_top (
     .qs     (device_id_2_qs)
   );
 
+
   // Subregister 3 of Multireg device_id
   // R[device_id_3]: V(True)
   prim_subreg_ext #(
-    .DW      (32)
+    .DW    (32)
   ) u_device_id_3 (
     .re     (device_id_3_re),
     .we     (1'b0),
@@ -914,10 +921,11 @@ module lc_ctrl_regs_reg_top (
     .qs     (device_id_3_qs)
   );
 
+
   // Subregister 4 of Multireg device_id
   // R[device_id_4]: V(True)
   prim_subreg_ext #(
-    .DW      (32)
+    .DW    (32)
   ) u_device_id_4 (
     .re     (device_id_4_re),
     .we     (1'b0),
@@ -930,10 +938,11 @@ module lc_ctrl_regs_reg_top (
     .qs     (device_id_4_qs)
   );
 
+
   // Subregister 5 of Multireg device_id
   // R[device_id_5]: V(True)
   prim_subreg_ext #(
-    .DW      (32)
+    .DW    (32)
   ) u_device_id_5 (
     .re     (device_id_5_re),
     .we     (1'b0),
@@ -946,10 +955,11 @@ module lc_ctrl_regs_reg_top (
     .qs     (device_id_5_qs)
   );
 
+
   // Subregister 6 of Multireg device_id
   // R[device_id_6]: V(True)
   prim_subreg_ext #(
-    .DW      (32)
+    .DW    (32)
   ) u_device_id_6 (
     .re     (device_id_6_re),
     .we     (1'b0),
@@ -962,10 +972,11 @@ module lc_ctrl_regs_reg_top (
     .qs     (device_id_6_qs)
   );
 
+
   // Subregister 7 of Multireg device_id
   // R[device_id_7]: V(True)
   prim_subreg_ext #(
-    .DW      (32)
+    .DW    (32)
   ) u_device_id_7 (
     .re     (device_id_7_re),
     .we     (1'b0),
@@ -982,7 +993,7 @@ module lc_ctrl_regs_reg_top (
   // Subregister 0 of Multireg manuf_state
   // R[manuf_state_0]: V(True)
   prim_subreg_ext #(
-    .DW      (32)
+    .DW    (32)
   ) u_manuf_state_0 (
     .re     (manuf_state_0_re),
     .we     (1'b0),
@@ -995,10 +1006,11 @@ module lc_ctrl_regs_reg_top (
     .qs     (manuf_state_0_qs)
   );
 
+
   // Subregister 1 of Multireg manuf_state
   // R[manuf_state_1]: V(True)
   prim_subreg_ext #(
-    .DW      (32)
+    .DW    (32)
   ) u_manuf_state_1 (
     .re     (manuf_state_1_re),
     .we     (1'b0),
@@ -1011,10 +1023,11 @@ module lc_ctrl_regs_reg_top (
     .qs     (manuf_state_1_qs)
   );
 
+
   // Subregister 2 of Multireg manuf_state
   // R[manuf_state_2]: V(True)
   prim_subreg_ext #(
-    .DW      (32)
+    .DW    (32)
   ) u_manuf_state_2 (
     .re     (manuf_state_2_re),
     .we     (1'b0),
@@ -1027,10 +1040,11 @@ module lc_ctrl_regs_reg_top (
     .qs     (manuf_state_2_qs)
   );
 
+
   // Subregister 3 of Multireg manuf_state
   // R[manuf_state_3]: V(True)
   prim_subreg_ext #(
-    .DW      (32)
+    .DW    (32)
   ) u_manuf_state_3 (
     .re     (manuf_state_3_re),
     .we     (1'b0),
@@ -1043,10 +1057,11 @@ module lc_ctrl_regs_reg_top (
     .qs     (manuf_state_3_qs)
   );
 
+
   // Subregister 4 of Multireg manuf_state
   // R[manuf_state_4]: V(True)
   prim_subreg_ext #(
-    .DW      (32)
+    .DW    (32)
   ) u_manuf_state_4 (
     .re     (manuf_state_4_re),
     .we     (1'b0),
@@ -1059,10 +1074,11 @@ module lc_ctrl_regs_reg_top (
     .qs     (manuf_state_4_qs)
   );
 
+
   // Subregister 5 of Multireg manuf_state
   // R[manuf_state_5]: V(True)
   prim_subreg_ext #(
-    .DW      (32)
+    .DW    (32)
   ) u_manuf_state_5 (
     .re     (manuf_state_5_re),
     .we     (1'b0),
@@ -1075,10 +1091,11 @@ module lc_ctrl_regs_reg_top (
     .qs     (manuf_state_5_qs)
   );
 
+
   // Subregister 6 of Multireg manuf_state
   // R[manuf_state_6]: V(True)
   prim_subreg_ext #(
-    .DW      (32)
+    .DW    (32)
   ) u_manuf_state_6 (
     .re     (manuf_state_6_re),
     .we     (1'b0),
@@ -1091,10 +1108,11 @@ module lc_ctrl_regs_reg_top (
     .qs     (manuf_state_6_qs)
   );
 
+
   // Subregister 7 of Multireg manuf_state
   // R[manuf_state_7]: V(True)
   prim_subreg_ext #(
-    .DW      (32)
+    .DW    (32)
   ) u_manuf_state_7 (
     .re     (manuf_state_7_re),
     .we     (1'b0),
@@ -1152,8 +1170,8 @@ module lc_ctrl_regs_reg_top (
 
   // Check sub-word write is permitted
   always_comb begin
-    wr_err = (reg_we &(
-               (addr_hit[ 0] & (|(LC_CTRL_REGS_PERMIT[ 0] & ~reg_be))) |
+    wr_err = (reg_we &
+              ((addr_hit[ 0] & (|(LC_CTRL_REGS_PERMIT[ 0] & ~reg_be))) |
                (addr_hit[ 1] & (|(LC_CTRL_REGS_PERMIT[ 1] & ~reg_be))) |
                (addr_hit[ 2] & (|(LC_CTRL_REGS_PERMIT[ 2] & ~reg_be))) |
                (addr_hit[ 3] & (|(LC_CTRL_REGS_PERMIT[ 3] & ~reg_be))) |

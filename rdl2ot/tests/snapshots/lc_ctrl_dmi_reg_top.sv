@@ -46,6 +46,7 @@ module lc_ctrl_dmi_reg_top (
     .tl_i(tl_o_pre),
     .tl_o(tl_o)
   );
+
   assign tl_win_o = tl_i;
   assign tl_o_pre = tl_win_i;
 
