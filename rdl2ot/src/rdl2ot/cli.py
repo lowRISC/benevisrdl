@@ -29,18 +29,23 @@ def main() -> None:
     default="./result",
     type=click.Path(writable=True),
 )
-def export_rtl(input_file: str, out_dir: str) -> None:
+@click.option(
+    "--soc",
+    is_flag=True,
+)
+def export_rtl(input_file: str, out_dir: str, soc: bool = False) -> None:
     """Export opentitan rtl.
 
     INPUT_FILE: The input RDL
     OUT_DIR: The destination dir to generate the output
+    SOC: Indicates that the input RDL is a SoC top
 
     """
-    print("Compiling file: {input_file}...")
+    print(f"Compiling file: {input_file}...")
     rdlc = RDLCompiler()
     rdlc.compile_file(input_file)
     root = rdlc.elaborate()
 
-    rtl_exporter.run(root.top, Path(out_dir))
+    rtl_exporter.run(root.top, Path(out_dir), soc)
 
     print("Successfully finished!\n")

@@ -1,0 +1,7 @@
+`include "uart.rdl"
+`include "lc_ctrl.rdl"
+
+addrmap soc_strawberry {
+  uart UART[3];
+  lc_ctrl LC_CTRL;
+};

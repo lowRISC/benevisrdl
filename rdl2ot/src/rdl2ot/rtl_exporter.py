@@ -22,26 +22,38 @@ def _camelcase(value: str) -> str:
     return "".join(word.capitalize() for word in words)
 
 
-def run(root_node: node.AddrmapNode, out_dir: Path) -> None:
-    """Export RDL to opentitan RTL."""
+def run(root_node: node.AddrmapNode, out_dir: Path, is_soc: bool = False) -> None:
+    """Export RDL to opentitan RTL.
+
+    IS_SOC: True if the root node is a SoC with peripherals/devices.
+    """
     factory = OtInterfaceBuilder()
-    data = factory.parse_root(root_node)
+    data = factory.parse_soc(root_node) if is_soc else factory.parse_ip_block(root_node)
 
     Path(out_dir / "rdl.json").write_text(json.dumps(data, indent=2), encoding="utf-8")
 
+    if not is_soc:
+        _export(data, out_dir)
+        return
+
+    for ip_block in data["devices"]:
+        _export(ip_block, out_dir)
+
+
+def _export(ip_block: dict, out_dir: Path) -> None:
     file_loader = FileSystemLoader(TEMPLATES_DIR)
     env = Environment(loader=file_loader)
     env.filters["camelcase"] = _camelcase
 
-    ip_name = data["ip_name"]
+    ip_name = ip_block["ip_name"].lower()
     reg_pkg_tpl = env.get_template("reg_pkg.sv.tpl")
-    stream = reg_pkg_tpl.render(data)
+    stream = reg_pkg_tpl.render(ip_block)
     path = out_dir / f"{ip_name}_reg_pkg.sv"
     path.open("w").write(stream)
     print(f"Generated {path}.")
 
     reg_top_tpl = env.get_template("reg_top.sv.tpl")
-    for interface in data["interfaces"]:
+    for interface in ip_block["interfaces"]:
         name = "_{}".format(interface["name"].lower()) if "name" in interface else ""
         data_ = {"ip_name": ip_name, "interface": interface}
         stream = reg_top_tpl.render(data_).replace(" \n", "\n")
@@ -193,14 +205,10 @@ class OtInterfaceBuilder:
         self.any_shadowed_reg = False
         self.async_registers.clear()
 
-        if addrmap.is_array:
-            print(f"WARNING: Unsupported array type: {type(addrmap)}, skiping...")
-
         interface = {}
         if defalt_name:
             interface["name"] = addrmap.inst_name or defalt_name
 
-        interface["offset"] = addrmap.address_offset
         interface["regs"] = []
         interface["windows"] = []
         for child in addrmap.children():
@@ -247,25 +255,26 @@ class OtInterfaceBuilder:
         ]
         return interface
 
-    def parse_root(self, root: node.AddrmapNode) -> dict:
-        """Parse the root node and return a dictionary representing a window."""
-        if root.is_array:
-            print("Error: Unsupported array type on the top")
-            raise RuntimeError
-        if not isinstance(root, node.AddrmapNode):
-            print("Error: Top level must be an addrmap")
-            raise TypeError
-
+    def parse_ip_block(self, ip_block: node.AddrmapNode) -> dict:
+        """Parse the ip_block node of an IP block and return a dictionary."""
         obj = {}
-        params = self.get_paramesters(root)
+        params = self.get_paramesters(ip_block)
         if params:
             obj["parameters"] = params
-        obj["ip_name"] = root.inst_name
-        obj["offset"] = root.address_offset
+        obj["ip_name"] = ip_block.inst_name
+
+        obj["offsets"] = []
+        if ip_block.is_array:
+            offset = ip_block.raw_address_offset
+            for _idx in range(ip_block.array_dimensions[0]):
+                obj["offsets"].append(offset)
+                offset += ip_block.array_stride
+        else:
+            obj["offsets"].append(ip_block.address_offset)
 
         obj["interfaces"] = []
         obj["alerts"] = []
-        for child in root.children():
+        for child in ip_block.children():
             if isinstance(child, node.AddrmapNode):
                 child_obj = self.get_interface(child, DEFAULT_INTERFACE_NAME)
                 obj["interfaces"].append(child_obj)
@@ -279,10 +288,24 @@ class OtInterfaceBuilder:
                 )
                 raise TypeError
 
-        # If the root contain imediate registers, use a default interface name
-        if len(root.registers()) > 0:
-            interface = self.get_interface(root)
+        # If the ip_block contain imediate registers, use a default interface name
+        if len(ip_block.registers()) > 0:
+            interface = self.get_interface(ip_block)
             obj["interfaces"].append(interface)
             obj["alerts"].extend(interface["alerts"])
 
+        return obj
+
+    def parse_soc(self, root: node.AddrmapNode) -> dict:
+        """Parse the SoC root node and return a dictionary."""
+        if root.is_array:
+            print("Error: Unsupported array type on the top")
+            raise RuntimeError
+        if not isinstance(root, node.AddrmapNode):
+            print("Error: Top level must be an addrmap")
+            raise TypeError
+
+        obj = {"devices": []}
+        for child in root.children():
+            obj["devices"].append(self.parse_ip_block(child))
         return obj
