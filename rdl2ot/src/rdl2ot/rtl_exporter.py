@@ -281,7 +281,7 @@ class OtInterfaceBuilder:
                 child_obj = self.get_interface(child, DEFAULT_INTERFACE_NAME)
                 obj["interfaces"].append(child_obj)
                 obj["alerts"].extend(child_obj["alerts"])
-            elif isinstance(child, node.RegNode | node.MemNode | node.RegfileNode):
+            elif isinstance(child, node.RegNode | node.MemNode | node.RegfileNode | node.SignalNode):
                 continue
             else:
                 print(
