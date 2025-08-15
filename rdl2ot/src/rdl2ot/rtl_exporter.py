@@ -30,7 +30,9 @@ def run(root_node: node.AddrmapNode, out_dir: Path, is_soc: bool = False) -> Non
     factory = OtInterfaceBuilder()
     data = factory.parse_soc(root_node) if is_soc else factory.parse_ip_block(root_node)
 
-    Path(out_dir / "rdl.json").write_text(json.dumps(data, indent=2), encoding="utf-8")
+    json_file = Path(out_dir / "rdl.json")
+    json_file.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    print(f"Generated {json_file}.")
 
     if not is_soc:
         _export(data, out_dir)
