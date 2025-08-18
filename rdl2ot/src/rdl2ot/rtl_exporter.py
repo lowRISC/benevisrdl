@@ -39,7 +39,8 @@ def run(root_node: node.AddrmapNode, out_dir: Path, is_soc: bool = False) -> Non
         return
 
     for ip_block in data["devices"]:
-        _export(ip_block, out_dir)
+        if ip_block["type"] == "device":
+            _export(ip_block, out_dir)
 
 
 def _export(ip_block: dict, out_dir: Path) -> None:
@@ -125,6 +126,7 @@ class OtInterfaceBuilder:
         """Parse a memory and return a dictionary representing a window."""
         obj = {}
         obj["name"] = mem.inst_name
+        obj["type"] = "mem"
         obj["entries"] = mem.get_property("mementries")
         obj["sw_writable"] = mem.is_sw_writable
         obj["sw_readable"] = mem.is_sw_readable
@@ -263,7 +265,7 @@ class OtInterfaceBuilder:
 
     def parse_ip_block(self, ip_block: node.AddrmapNode) -> dict:
         """Parse the ip_block node of an IP block and return a dictionary."""
-        obj = {"name": ip_block.inst_name, "type":"device"}
+        obj = {"name": ip_block.inst_name, "type": "device"}
         params = self.get_paramesters(ip_block)
         if params:
             obj["parameters"] = params
