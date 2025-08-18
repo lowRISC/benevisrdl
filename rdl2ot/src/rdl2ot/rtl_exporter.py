@@ -230,6 +230,9 @@ class OtInterfaceBuilder:
             elif isinstance(child, node.MemNode):
                 child_obj = self.get_mem(child)
                 interface["windows"].append(child_obj)
+            elif isinstance(child, node.SignalNode):
+                # Ignore: it should have being parsed by `parse_ip_block`
+                continue
             else:
                 print(f"WARNING: Unsupported type: {type(child)}, skiping...")
                 continue
