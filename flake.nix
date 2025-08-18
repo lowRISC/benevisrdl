@@ -60,7 +60,7 @@
       env = pythonSet.mkVirtualEnv "python-env" workspace.deps.default;
   in {
     devShells.x86_64-linux.default = pkgs.mkShell {
-      packages = [env pkgs.uv];
+      packages = [env pkgs.uv pkgs.reuse];
       buildInputs = [peakrdl];
     };
     formatter.x86_64-linux = nixpkgs.legacyPackages.x86_64-linux.alejandra;

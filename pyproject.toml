@@ -16,6 +16,7 @@ dependencies = [
 linting = [
   "pyright>=1.1.403",
   "ruff>=0.9.6",
+  "reuse>=5.0.2",
 ]
 dev = [
   "pytest>=8.4.1",
