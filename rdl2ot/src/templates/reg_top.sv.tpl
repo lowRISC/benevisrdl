@@ -13,7 +13,7 @@
 {%- set num_regs_digits = interface.num_regs | string | length %}
 {%- set clk_name = "aon_" %}
 
-module {{ ip_name|lower }}{{interface_name}}_reg_top (
+module {{ name|lower }}{{interface_name}}_reg_top (
   input clk_i,
   input rst_ni,
 {%- if interface.any_async_clk %}
@@ -36,8 +36,8 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
 
 {%- if has_regs %}
   // To HW
-  output {{ ip_name|lower }}_reg_pkg::{{ ip_name|lower }}{{interface_name}}_reg2hw_t reg2hw, // Write
-  input  {{ ip_name|lower }}_reg_pkg::{{ ip_name|lower }}{{interface_name}}_hw2reg_t hw2reg, // Read
+  output {{ name|lower }}_reg_pkg::{{ name|lower }}{{interface_name}}_reg2hw_t reg2hw, // Write
+  input  {{ name|lower }}_reg_pkg::{{ name|lower }}{{interface_name}}_hw2reg_t hw2reg, // Read
 {%- endif %}
 
 {%- if interface.any_shadowed_reg %}
@@ -51,7 +51,7 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
   output logic intg_err_o
 );
 
-  import {{ ip_name|lower }}_reg_pkg::* ;
+  import {{ name|lower }}_reg_pkg::* ;
 
 {%- if interface.needs_aw %}
 
@@ -555,7 +555,7 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
     {%- for offset in reg.offsets %}
       {%- set index = "{num:>{width}}".format(num=ns.counter, width=num_regs_digits) %}
       {%- set ns.counter = ns.counter + 1 %}
-    addr_hit[{{ index }}] = (reg_addr == {{ (ip_name ~ '_' ~ reg.name)|upper }}{% if reg.offsets|length > 1 %}_{{ loop.index0 }}{% endif %}_OFFSET);
+    addr_hit[{{ index }}] = (reg_addr == {{ (name ~ '_' ~ reg.name)|upper }}{% if reg.offsets|length > 1 %}_{{ loop.index0 }}{% endif %}_OFFSET);
     {%- endfor %}
   {%- endfor %}
   end
@@ -573,7 +573,7 @@ module {{ ip_name|lower }}{{interface_name}}_reg_top (
       {%- set index = "{num:>{width}}".format(num=ns.counter, width=num_regs_digits) %}
       {%- set ns.counter = ns.counter + 1 %}
               {{"(" if loop.first and outer_loop.first else " " -}}
-               (addr_hit[{{ index }}] & (|({{ (ip_name ~ interface_name)|upper}}_PERMIT[{{ index }}] & ~reg_be))) 
+               (addr_hit[{{ index }}] & (|({{ (name ~ interface_name)|upper}}_PERMIT[{{ index }}] & ~reg_be))) 
       {%- if loop.last and outer_loop.last %}));{% else %} |{% endif %}
     {%- endfor %}
   {%- endfor %}

@@ -47,7 +47,7 @@ def _export(ip_block: dict, out_dir: Path) -> None:
     env = Environment(loader=file_loader)
     env.filters["camelcase"] = _camelcase
 
-    ip_name = ip_block["ip_name"].lower()
+    ip_name = ip_block["name"].lower()
     reg_pkg_tpl = env.get_template("reg_pkg.sv.tpl")
     stream = reg_pkg_tpl.render(ip_block)
     path = out_dir / f"{ip_name}_reg_pkg.sv"
@@ -57,7 +57,7 @@ def _export(ip_block: dict, out_dir: Path) -> None:
     reg_top_tpl = env.get_template("reg_top.sv.tpl")
     for interface in ip_block["interfaces"]:
         name = "_{}".format(interface["name"].lower()) if "name" in interface else ""
-        data_ = {"ip_name": ip_name, "interface": interface}
+        data_ = {"name": ip_name, "interface": interface}
         stream = reg_top_tpl.render(data_).replace(" \n", "\n")
         path = out_dir / f"{ip_name}{name}_reg_top.sv"
         path.open("w").write(stream)
@@ -259,11 +259,10 @@ class OtInterfaceBuilder:
 
     def parse_ip_block(self, ip_block: node.AddrmapNode) -> dict:
         """Parse the ip_block node of an IP block and return a dictionary."""
-        obj = {}
+        obj = {"name": ip_block.inst_name, "type":"device"}
         params = self.get_paramesters(ip_block)
         if params:
             obj["parameters"] = params
-        obj["ip_name"] = ip_block.inst_name
 
         obj["offsets"] = []
         if ip_block.is_array:
