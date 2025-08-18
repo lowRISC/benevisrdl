@@ -311,5 +311,14 @@ class OtInterfaceBuilder:
 
         obj = {"devices": []}
         for child in root.children():
-            obj["devices"].append(self.parse_ip_block(child))
+            if isinstance(child, node.AddrmapNode):
+                obj["devices"].append(self.parse_ip_block(child))
+            elif isinstance(child, node.MemNode):
+                obj["devices"].append(self.get_mem(child))
+            else:
+                print(
+                    f"""Error: Unsupported type: {type(child)}, top level only supports
+                      addrmap and mem components."""
+                )
+                raise TypeError
         return obj
