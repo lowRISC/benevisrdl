@@ -75,6 +75,18 @@ class OtInterfaceBuilder:
     any_shadowed_reg: bool = False
     reg_index: int = 0
 
+    def parse_array(self, node_: node.AddressableNode) -> list:
+        """Parse an array node and return a list of offsets."""
+        offsets = []
+        if node_.is_array:
+            offset = node_.raw_address_offset
+            for _idx in range(node_.array_dimensions[0]):
+                offsets.append(offset)
+                offset += node_.array_stride
+        else:
+            offsets.append(node_.address_offset)
+        return offsets
+
     def get_field(self, field: node.FieldNode) -> dict:
         """Parse a field and return a dictionary."""
         obj = {}
@@ -140,17 +152,9 @@ class OtInterfaceBuilder:
         obj["shadowed"] = reg.get_property("shadowed", default=False)
         obj["hwre"] = reg.get_property("hwre", default=False)
 
-        obj["offsets"] = []
-        if reg.is_array:
-            obj["is_multireg"] = True
-            self.num_regs += reg.array_dimensions[0]
-            offset = reg.raw_address_offset
-            for _idx in range(reg.array_dimensions[0]):
-                obj["offsets"].append(offset)
-                offset += reg.array_stride
-        else:
-            self.num_regs += 1
-            obj["offsets"].append(reg.address_offset)
+        obj["offsets"] = self.parse_array(reg)
+        self.num_regs += len(obj["offsets"])
+        obj["is_multireg"] = len(obj["offsets"]) > 1
 
         obj["fields"] = []
         sw_write_en = False
@@ -264,14 +268,8 @@ class OtInterfaceBuilder:
         if params:
             obj["parameters"] = params
 
-        obj["offsets"] = []
-        if ip_block.is_array:
-            offset = ip_block.raw_address_offset
-            for _idx in range(ip_block.array_dimensions[0]):
-                obj["offsets"].append(offset)
-                offset += ip_block.array_stride
-        else:
-            obj["offsets"].append(ip_block.address_offset)
+        obj["offsets"] = self.parse_array(ip_block)
+        obj["size"] = ip_block.array_stride if ip_block.is_array else ip_block.size
 
         obj["interfaces"] = []
         obj["alerts"] = []
