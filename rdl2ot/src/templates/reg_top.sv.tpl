@@ -279,10 +279,10 @@ module {{ name|lower }}{{interface_name}}_reg_top (
   {%- for offset in reg.offsets %}
     {%- set multireg_idx = loop.index0 %}
     {%- set reg_suffix = ('_' ~ multireg_idx|string) if reg.offsets|length > 1 %}
-    {%- if reg.needs_read_en %}
+    {%- if reg.opentitan.needs_read_en %}
   logic {{ reg.name|lower }}{{ reg_suffix }}_re;
     {%- endif %}
-    {%- if reg.needs_write_en %}
+    {%- if reg.opentitan.needs_write_en %}
   logic {{ reg.name|lower }}{{ reg_suffix }}_we;
     {%- endif %}
     {%- for field in reg.fields %}
@@ -319,13 +319,13 @@ module {{ name|lower }}{{interface_name}}_reg_top (
         {%- set index = ('_' ~ multireg_idx|string) if reg.offsets|length > 1 %}
         {%- set sig_name = (clk_name ~ reg.name ~ index)|lower %}
 
-        {%- set src_we_expr = "{}_we".format(reg.name|lower ~ index) if reg.needs_write_en else "'0" %}
-        {%- set src_wd_expr = "reg_wdata[{}:0]".format(reg.msb) if reg.needs_write_en else "'0" %}
-        {%- set src_re_expr = "{}_re".format(reg.name|lower ~ index) if reg.needs_read_en else "'0" %}
+        {%- set src_we_expr = "{}_we".format(reg.name|lower ~ index) if reg.opentitan.needs_write_en else "'0" %}
+        {%- set src_wd_expr = "reg_wdata[{}:0]".format(reg.msb) if reg.opentitan.needs_write_en else "'0" %}
+        {%- set src_re_expr = "{}_re".format(reg.name|lower ~ index) if reg.opentitan.needs_read_en else "'0" %}
         {%- set src_regwen_expr = "{}_qs".format(reg.fields[0].write_en_signal.parent_name|lower) if reg.sw_write_en else "'0" %}
-        {%- set dst_we_expr = "{}_we".format(sig_name) if reg.needs_write_en %}
-        {%- set dst_wd_expr = "{}_wdata".format(sig_name) if reg.needs_write_en %}
-        {%- set dst_re_expr = "{}_re".format(sig_name) if reg.needs_read_en %}
+        {%- set dst_we_expr = "{}_we".format(sig_name) if reg.opentitan.needs_write_en %}
+        {%- set dst_wd_expr = "{}_wdata".format(sig_name) if reg.opentitan.needs_write_en %}
+        {%- set dst_re_expr = "{}_re".format(sig_name) if reg.opentitan.needs_read_en %}
         {%- set dst_qe_expr = "{}_qe".format(sig_name) if reg.hw_writable else "'0" %}
         {%- set dst_wr_req = "1" if reg.hw_writable else "0" %}
         {%- set dst_ds_expr = "{}_ds".format(sig_name) if reg.hw_writable else "'0" %}
@@ -347,12 +347,12 @@ module {{ name|lower }}{{interface_name}}_reg_top (
   logic {{ dst_qe_expr }};
         {%- endif %}
   logic [{{ reg.msb }}:0] {{ sig_name }}_qs;
-        {%- if reg.needs_write_en %}
+        {%- if reg.opentitan.needs_write_en %}
   logic [{{ reg.msb }}:0] {{ sig_name }}_wdata;
   logic {{ sig_name }}_we;
   logic unused_{{ sig_name }}_wdata;
         {%- endif %}
-        {%- if reg.needs_read_en %}
+        {%- if reg.opentitan.needs_read_en %}
   logic {{ dst_re_expr }};
         {%- endif %}
         {%- if reg.sw_write_en %}
@@ -403,7 +403,7 @@ module {{ name|lower }}{{interface_name}}_reg_top (
     .dst_regwen_o ({{ dst_regwen_expr }}),
     .dst_wd_o     ({{ dst_wd_expr }})
   );
-        {%- if reg.needs_write_en %}
+        {%- if reg.opentitan.needs_write_en %}
   assign unused_{{ sig_name }}_wdata =
       ^{{ sig_name }}_wdata;
         {%- endif %}
@@ -431,22 +431,22 @@ module {{ name|lower }}{{interface_name}}_reg_top (
     {%- endif %}
 {{- space }}
   // R[{{ regname }}]: V({{ reg.external }})
-    {%- if reg.needs_qe %}
+    {%- if reg.opentitan.needs_qe %}
   logic {{ regname }}_qe;
     {%- endif %}
-    {%- if reg.needs_int_qe %}
+    {%- if reg.opentitan.needs_int_qe %}
   logic {{ '[{}:0] {}'.format(reg.fields|length - 1, regname) }}_flds_we;
     {%- endif %}
-    {%- if reg.needs_qe  %}
+    {%- if reg.opentitan.needs_qe  %}
       {%- if reg.external %}
-        {%- if reg.fields_no_write_en > 0 %}
+        {%- if reg.opentitan.fields_no_write_en > 0 %}
   // This ignores QEs that are set to constant 0 due to read-only fields.
   logic unused_{{ reg.name|lower }}_flds_we;
-  assign unused_{{ reg.name|lower }}_flds_we = {{ "^({}_flds_we & {}'h{:x})".format(reg.name|lower, reg.fields|length, reg.fields_no_write_en ) }};
+  assign unused_{{ reg.name|lower }}_flds_we = {{ "^({}_flds_we & {}'h{:x})".format(reg.name|lower, reg.fields|length, reg.opentitan.fields_no_write_en ) }};
       {%- endif %}
       {%- set right_expr = "{}_flds_we".format(regname) %}
-      {%- set right_expr = right_expr ~ (" | {}'h{:x}".format(reg.fields|length, reg.fields_no_write_en ) if reg.fields_no_write_en > 0) %}
-  assign {{regname }}_qe = &{{ "({})".format(right_expr) if reg.fields_no_write_en > 0 else "{}".format(right_expr) }};
+      {%- set right_expr = right_expr ~ (" | {}'h{:x}".format(reg.fields|length, reg.opentitan.fields_no_write_en ) if reg.opentitan.fields_no_write_en > 0) %}
+  assign {{regname }}_qe = &{{ "({})".format(right_expr) if reg.opentitan.fields_no_write_en > 0 else "{}".format(right_expr) }};
       {%- else %}
   prim_flop #(
     .Width(1),
@@ -454,7 +454,7 @@ module {{ name|lower }}{{interface_name}}_reg_top (
   ) u_{{ reg.name|lower ~ loop.index0}}_qe (
     .clk_i(clk_i),
     .rst_ni(rst_ni),
-    .d_i(&({{ regname }}_flds_we {{"| {}'h{:x}".format(reg.fields|length, reg.fields_no_write_en) if reg.fields_no_write_en }})),
+    .d_i(&({{ regname }}_flds_we {{"| {}'h{:x}".format(reg.fields|length, reg.opentitan.fields_no_write_en) if reg.opentitan.fields_no_write_en }})),
     .q_o({{ regname }}_qe)
   );
       {%- endif %}
@@ -462,7 +462,7 @@ module {{ name|lower }}{{interface_name}}_reg_top (
     {%- if reg.async_clk and reg.hw_writable %}
   assign {{clk_prefix ~ regname }}_qe = |{{"{}".format(regname) }}_flds_we;
     {%- endif %}
-    {%- if reg.sw_write_en and reg.needs_write_en %}
+    {%- if reg.sw_write_en and reg.opentitan.needs_write_en %}
   // Create REGWEN-gated WE signal
   logic {{clk_prefix ~ regname }}_gated_we;
       {%- set assign.expr = (clk_prefix ~ regname ~ '_we')|lower %}
@@ -479,7 +479,7 @@ module {{ name|lower }}{{interface_name}}_reg_top (
     {%- endif %}
     {%- for field in reg.fields  %}
       {%- set field_name = "_{}{}".format(field.name, multireg_suffix)|lower if reg.is_multifields %}
-      {%- set property = ".{}".format(field.name)|lower if reg.is_multifields and not reg.is_homogeneous %}
+      {%- set property = ".{}".format(field.name)|lower if reg.is_multifields and not reg.opentitan.is_homogeneous %}
       {%- set bit_index = "[{}:{}]".format(field.msb, field.lsb) if field.msb != field.lsb else "[{}]".format(field.msb) %}
       {%- if reg.is_multifields %}
   //   F{{ '[{}{}]: {}:{}'.format(field.name, multireg_suffix, field.msb, field.lsb)|lower }}
@@ -488,7 +488,7 @@ module {{ name|lower }}{{interface_name}}_reg_top (
     .DW    ({{ field.width }})
       {%- if not reg.external -%}
     ,
-    .SwAccess(prim_subreg_pkg::SwAccess{{ field.reggen_sw_access }}),
+    .SwAccess(prim_subreg_pkg::SwAccess{{ field.opentitan.reggen_sw_access }}),
     .RESVAL  ({{ "{}'h{:x}".format(field.width, (field.reset if field.reset else 0)) }}),
     .Mubi    (1'b{{ ("MultiBitBool" in field.encode)|int }})
       {%- endif %}
@@ -501,7 +501,7 @@ module {{ name|lower }}{{interface_name}}_reg_top (
       {%- endif %}
       {%- endif %}
 {{- space }}
-    {%- set idx = loop.index0 if reg.is_homogeneous and reg.is_multifields else multireg_idx %}
+    {%- set idx = loop.index0 if reg.opentitan.is_homogeneous and reg.is_multifields else multireg_idx %}
     {%- set sig_name = (reg.name ~ ("[{}]".format(idx) if reg.is_multireg) ~ property)|lower -%}
     {%- set suffix = "_int" if reg.async_clk %}
       {%- if reg.external or reg.shadowed %}
@@ -516,7 +516,7 @@ module {{ name|lower }}{{interface_name}}_reg_top (
       {%- if reg.external %}
     .qre    ({{  "reg2hw.{}.re".format(sig_name) if reg.hwre or reg.shadowed }}),
       {%- endif %}
-    .qe     ({{ "{}_flds_we[{}]".format(regname, loop.index0) if reg.needs_int_qe  }}),
+    .qe     ({{ "{}_flds_we[{}]".format(regname, loop.index0) if reg.opentitan.needs_int_qe  }}),
     .q      ({{ "reg2hw.{}.q".format(sig_name) if field.hw_readable }}),
     .ds     ({{ "{}{}{}_ds{}".format(clk_prefix, regname, field_name, suffix) if reg.async_clk and reg.hw_writable }}),
     .qs     ({{ "{}{}_qs{}".format(clk_prefix, regname ~ field_name, suffix) if field.sw_readable }})
@@ -585,10 +585,10 @@ module {{ name|lower }}{{interface_name}}_reg_top (
     {%- for offset in reg.offsets %}
       {%- set reg_suffix = ('_' ~ loop.index0|string) if reg.offsets|length > 1 %}
       {%- set regname = "{}{}".format(reg.name, reg_suffix)|lower %}
-      {%- if reg.needs_read_en %}
+      {%- if reg.opentitan.needs_read_en %}
   assign {{ regname }}_re = addr_hit[{{ ns.re_index }}] & reg_re & !reg_error;
       {%- endif %}
-      {%- if reg.needs_write_en %}
+      {%- if reg.opentitan.needs_write_en %}
   assign {{ regname }}_we = addr_hit[{{ ns.re_index }}] & reg_we & !reg_error;
       {%- endif %}
       {%- set ns.re_index = ns.re_index + 1 %}
@@ -610,7 +610,7 @@ module {{ name|lower }}{{interface_name}}_reg_top (
   {%- for reg in registers %}
     {%- for offset in reg.offsets %}
       {%- set reg_suffix = ('_' ~ loop.index0|string) if reg.offsets|length > 1 %}
-      {%- set expr = "{}{}{}_we".format(reg.name, reg_suffix, "_gated" if not reg.async_clk and reg.sw_write_en)|lower if reg.needs_write_en else "1'b0" %}
+      {%- set expr = "{}{}{}_we".format(reg.name, reg_suffix, "_gated" if not reg.async_clk and reg.sw_write_en)|lower if reg.opentitan.needs_write_en else "1'b0" %}
     reg_we_check[{{ ns.counter }}] = {{ expr }};
       {%- set ns.counter = ns.counter + 1 %}
     {%- endfor %}
@@ -624,7 +624,7 @@ module {{ name|lower }}{{interface_name}}_reg_top (
   {%- set ns = namespace(counter=0) %}
   {%- for reg in registers %}
     {%- for offset in reg.offsets %}
-      {%- set reg_suffix = ('_' ~ loop.index0|string) if reg.offsets|length > 1 and not (reg.is_homogeneous and reg.is_multifields)  %}
+      {%- set reg_suffix = ('_' ~ loop.index0|string) if reg.offsets|length > 1 and not (reg.opentitan.is_homogeneous and reg.is_multifields)  %}
       addr_hit[{{ ns.counter }}]: begin
       {%- set ns.counter = ns.counter + 1 %}
       {%- if reg.async_clk %}
