@@ -215,7 +215,7 @@ package {{ name }}_reg_pkg;
   parameter logic [3:0] {{ (name ~ interface_name)|upper }}_PERMIT [{{ interface.num_regs }}] = '{
           {%- set printed.header = true %}
         {%- endif %}
-    4'b {{ "{:04b}{} // {} {}_{}{}".format(reg.permit, "," if not (loop.last and out_loop.last) else " ", index, name|upper, regname, suffix) }}
+    4'b {{ "{:04b}{} // {} {}_{}{}".format(reg.opentitan.permit, "," if not (loop.last and out_loop.last) else " ", index, name|upper, regname, suffix) }}
         {%- set ns.index = ns.index + 1 %}
       {%- endfor %}
     {%- endfor %}

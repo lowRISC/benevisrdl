@@ -119,7 +119,7 @@ class OtInterfaceBuilder:
             obj["encode"] = encode.type_name
         obj["async"] = field.get_property("async", default=None)
         obj["sync"] = field.get_property("sync", default=None)
-        obj["reggen_sw_access"] = opentitan.get_sw_access_enum(field)
+        obj["opentitan"] = {"reggen_sw_access": opentitan.get_sw_access_enum(field)}
         return obj
 
     def get_mem(self, mem: node.FieldNode) -> dict:
@@ -172,18 +172,20 @@ class OtInterfaceBuilder:
             reset_val |= field.get("reset", 0) << field["lsb"]
 
         obj["msb"] = msb
-        obj["permit"] = opentitan.register_permit_mask(obj)
         obj["sw_write_en"] = sw_write_en
         obj["bitmask"] = bitmask
         obj["reset"] = reset_val
         obj["async"] = False
-        obj["needs_write_en"] = opentitan.needs_write_en(obj)
-        obj["needs_read_en"] = opentitan.needs_read_en(obj)
-        obj["needs_qe"] = opentitan.needs_qe(obj)
-        obj["needs_int_qe"] = opentitan.needs_int_qe(obj)
-        obj["fields_no_write_en"] = opentitan.fields_no_write_en(obj)
         obj["is_multifields"] = len(obj["fields"]) > 1
-        obj["is_homogeneous"] = opentitan.is_homogeneous(obj)
+        obj["opentitan"] = {
+            "permit": opentitan.register_permit_mask(obj),
+            "needs_write_en": opentitan.needs_write_en(obj),
+            "needs_read_en": opentitan.needs_read_en(obj),
+            "needs_qe": opentitan.needs_qe(obj),
+            "needs_int_qe": opentitan.needs_int_qe(obj),
+            "fields_no_write_en": opentitan.fields_no_write_en(obj),
+            "is_homogeneous": opentitan.is_homogeneous(obj),
+        }
 
         self.any_async_clk |= bool(obj["async_clk"])
         self.all_async_clk &= bool(obj["async_clk"])

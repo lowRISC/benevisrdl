@@ -113,7 +113,7 @@ def needs_we(field: dict) -> bool:
     RC registers, which should use a read-enable signal (connected to their
     prim_subreg's we port).
     """
-    return field["reggen_sw_access"] != "RC" and field["sw_writable"]
+    return field["opentitan"]["reggen_sw_access"] != "RC" and field["sw_writable"]
 
 
 def is_homogeneous(reg: dict) -> bool:
