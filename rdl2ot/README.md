@@ -1,4 +1,9 @@
 # rdl2ot cli tool
+<!--
+# SPDX-FileCopyrightText: lowRISC contributors.
+# SPDX-License-Identifier: Apache-2.0
+-->
+
 A PeakRDL extension to generate OpenTitan register block SystemVerilog from SystemRDL files.
 
 ## Using as a standalone tool

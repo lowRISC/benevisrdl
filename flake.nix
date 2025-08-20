@@ -1,3 +1,7 @@
+# Copyright lowRISC contributors.
+# Licensed under the Apache License, Version 2.0, see LICENSE for details.
+# SPDX-License-Identifier: Apache-2.0
+
 {
   description = "Python env for rdl2ot";
 
@@ -56,7 +60,7 @@
       env = pythonSet.mkVirtualEnv "python-env" workspace.deps.default;
   in {
     devShells.x86_64-linux.default = pkgs.mkShell {
-      packages = [env pkgs.uv];
+      packages = [env pkgs.uv pkgs.reuse];
       buildInputs = [peakrdl];
     };
     formatter.x86_64-linux = nixpkgs.legacyPackages.x86_64-linux.alejandra;

@@ -1,4 +1,9 @@
 # BenevisRDL
+<!--
+# SPDX-FileCopyrightText: lowRISC contributors.
+# SPDX-License-Identifier: Apache-2.0
+-->
+
 This repository will house PeakRDL plugins, named after Ben Nevis, the UK's tallest peak.
 
 ## Installing dependencies

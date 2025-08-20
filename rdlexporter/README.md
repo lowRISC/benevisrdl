@@ -1,4 +1,9 @@
 # rdlexporter
+<!--
+# SPDX-FileCopyrightText: lowRISC contributors.
+# SPDX-License-Identifier: Apache-2.0
+-->
+
 A library to generate SystemRDL files from the Hierarchical Register Model.
 
 How to use it: 
