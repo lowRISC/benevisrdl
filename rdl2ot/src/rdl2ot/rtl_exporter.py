@@ -5,6 +5,7 @@
 """Export RDL to opentitan RTL."""
 
 import json
+from enum import Enum
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
@@ -65,6 +66,33 @@ def _export(ip_block: dict, out_dir: Path) -> None:
         print(f"Generated {path}.")
 
 
+class SigType(Enum):
+    """Used to give a signal different purposes."""
+
+    NONE = "None"
+    PadInOut = "PadInOut"
+    PadInput = "PadInput"
+    PadOutput = "PadOutput"
+    Interrupt = "Interrupt"
+
+    def is_pad(self) -> bool:
+        """Check whether a signal is a pad."""
+        return self in [SigType.PadInOut, SigType.PadInput, SigType.PadOutput]
+
+    def is_interrupt(self) -> bool:
+        """Check whether a signal is a interrupt."""
+        return self in [SigType.Interrupt]
+
+
+class IoCombine(Enum):
+    """May be used when a signal is a pad."""
+
+    NONE = "None"
+    Mux = "Mux"
+    And = "And"
+    Or = "Or"
+
+
 class OtInterfaceBuilder:
     """OpenTitan Interface Builder."""
 
@@ -75,6 +103,18 @@ class OtInterfaceBuilder:
     async_registers: list = [(int, str)]  # List of all the (index, register) with async clock
     any_shadowed_reg: bool = False
     reg_index: int = 0
+
+    def get_signal(self, sig: node.SignalNode) -> dict:
+        """Parse a signal and return a dict."""
+        obj = {}
+        obj["name"] = sig.inst_name
+        kind = sig.get_property("sigtype")
+        obj["type"] = kind.name
+        if SigType(kind.name).is_pad():
+            obj["width"] = sig.get_property("signalwidth")
+            if combine := sig.get_property("io_combine"):
+                obj["combine"] = combine.name
+        return obj
 
     def parse_array(self, node_: node.AddressableNode) -> list:
         """Parse an array node and return a list of offsets."""
@@ -140,9 +180,7 @@ class OtInterfaceBuilder:
 
     def get_reg(self, reg: node.RegNode) -> dict:
         """Parse a register and return a dictionary."""
-        obj = {}
-        obj["name"] = reg.inst_name
-        obj["type"] = "reg"
+        obj = {"name": reg.inst_name, "type": "reg"}
         obj["width"] = reg.get_property("regwidth")
         obj["hw_readable"] = reg.has_hw_readable
         obj["hw_writable"] = reg.has_hw_writable
@@ -155,14 +193,15 @@ class OtInterfaceBuilder:
         obj["hwre"] = reg.get_property("hwre", default=False)
 
         obj["offsets"] = self.parse_array(reg)
-        self.num_regs += len(obj["offsets"])
-        obj["is_multireg"] = len(obj["offsets"]) > 1
+        array_size = len(obj["offsets"])
+        self.num_regs += array_size
+        obj["is_multireg"] = array_size > 1
 
-        obj["fields"] = []
         sw_write_en = False
         msb = 0
         reset_val = 0
         bitmask = 0
+        obj["fields"] = []
         for f in reg.fields():
             field = self.get_field(f)
             obj["fields"].append(field)
@@ -191,7 +230,6 @@ class OtInterfaceBuilder:
         self.all_async_clk &= bool(obj["async_clk"])
         self.any_shadowed_reg |= bool(obj["shadowed"])
 
-        array_size = len(obj["offsets"])
         if bool(obj["async_clk"]):
             for index in range(array_size):
                 reg_name = reg.inst_name + (f"_{index}" if array_size > 1 else "")
@@ -280,18 +318,25 @@ class OtInterfaceBuilder:
 
         obj["interfaces"] = []
         obj["alerts"] = []
+        obj["pads"] = []
+        obj["interrupts"] = []
         for child in ip_block.children():
             if isinstance(child, node.AddrmapNode):
                 child_obj = self.get_interface(child, DEFAULT_INTERFACE_NAME)
                 obj["interfaces"].append(child_obj)
                 obj["alerts"].extend(child_obj["alerts"])
-            elif isinstance(child, node.RegNode | node.MemNode | node.RegfileNode | node.SignalNode):
+            elif isinstance(child, node.SignalNode):
+                signal = self.get_signal(child)
+                if SigType(signal["type"]).is_pad():
+                    obj["pads"].append(signal)
+                elif SigType(signal["type"]).is_interrupt():
+                    obj["interrupts"].append(signal)
+                else:
+                    print(f"WARNING: Unsupported signal type: {signal}.")
+            elif isinstance(child, node.RegNode | node.MemNode | node.RegfileNode):
                 continue
             else:
-                print(
-                    f"""Error: Unsupported type: {type(child)}, top level only supports
-                      addrmap and reg components."""
-                )
+                print(f"ERROR: Unsupported type: {type(child)} in Ip block {ip_block.inst_name}.")
                 raise TypeError
 
         # If the ip_block contain imediate registers, use a default interface name
@@ -311,7 +356,7 @@ class OtInterfaceBuilder:
             print("Error: Top level must be an addrmap")
             raise TypeError
 
-        obj = {"devices": []}
+        obj = {"name":root.inst_name, "devices": []}
         for child in root.children():
             if isinstance(child, node.AddrmapNode):
                 obj["devices"].append(self.parse_ip_block(child))
@@ -323,4 +368,16 @@ class OtInterfaceBuilder:
                       addrmap and mem components."""
                 )
                 raise TypeError
+
+        interrupts = []
+        for device in obj["devices"]:
+            if len(device.get("interrupts", [])) == 0:
+                continue
+            is_array = len(device["offsets"]) > 0
+            for idx, _ in enumerate(device["offsets"]):
+                suffix = f"_{idx}" if is_array else ""
+                interrupts.append(device["name"] + suffix)
+
+        if len(interrupts) > 0:
+            obj["interrupts"] = interrupts
         return obj
