@@ -4,13 +4,13 @@
 
 [project]
 name = "rdlexporter"
-version = "0.1.0"
+version = "0.2.0"
 description = "Library to export rdl files"
 requires-python = ">=3.10"
 keywords = ["SystemRDL", "library", "exporter"]
 readme = "README.md"
 dependencies = [
-  "peakrdl>=1.4.0",
+  "systemrdl-compiler>=1.29",
 ]
 
 authors = [

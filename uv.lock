@@ -292,39 +292,6 @@ wheels = [
 ]
 
 [[package]]
-name = "git-me-the-url"
-version = "2.1.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "gitpython" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/b6/bb/5f894e0d740b6094f2fc7c3c00f9bf97eeb1778af8f8c470326f6284d716/git-me-the-url-2.1.0.tar.gz", hash = "sha256:abf8f4b10de393fe869225e0cd66f40de1864806cd1da2974026b9e91112c038", size = 19768 }
-
-[[package]]
-name = "gitdb"
-version = "4.0.12"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "smmap" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/72/94/63b0fc47eb32792c7ba1fe1b694daec9a63620db1e313033d18140c2320a/gitdb-4.0.12.tar.gz", hash = "sha256:5ef71f855d191a3326fcfbc0d5da835f26b13fbcba60c32c21091c349ffdb571", size = 394684 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/a0/61/5c78b91c3143ed5c14207f463aecfc8f9dbb5092fb2869baf37c273b2705/gitdb-4.0.12-py3-none-any.whl", hash = "sha256:67073e15955400952c6565cc3e707c554a4eea2e428946f7a4c162fab9bd9bcf", size = 62794 },
-]
-
-[[package]]
-name = "gitpython"
-version = "3.1.44"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "gitdb" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/c0/89/37df0b71473153574a5cdef8f242de422a0f5d26d7a9e231e6f169b4ad14/gitpython-3.1.44.tar.gz", hash = "sha256:c87e30b26253bf5418b01b0660f818967f3c503193838337fe5e573331249269", size = 214196 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/1d/9a/4114a9057db2f1462d5c8f8390ab7383925fe1ac012eaa42402ad65c2963/GitPython-3.1.44-py3-none-any.whl", hash = "sha256:9e0e10cda9bed1ee64bc9a6de50e7e38a9c9943241cd7f585f6df3ed28011110", size = 207599 },
-]
-
-[[package]]
 name = "id"
 version = "1.5.0"
 source = { registry = "https://pypi.org/simple" }
@@ -602,113 +569,6 @@ wheels = [
 ]
 
 [[package]]
-name = "peakrdl"
-version = "1.4.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "peakrdl-cheader" },
-    { name = "peakrdl-cli" },
-    { name = "peakrdl-html" },
-    { name = "peakrdl-ipxact" },
-    { name = "peakrdl-regblock" },
-    { name = "peakrdl-systemrdl" },
-    { name = "peakrdl-uvm" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/b3/8d/0251e9fde0f225ce0a3a00d022ee403cbcfc379b5f829eb3061d8bf59151/peakrdl-1.4.0.tar.gz", hash = "sha256:51bf255309b24b0d33a9faf62106203941ca23223b733caf1f493614c3a4b225", size = 5144 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/39/a0/dd8f23e3474bc89a27ba3bdf9c54b8d8c995653460fa8875755585b71db3/peakrdl-1.4.0-py3-none-any.whl", hash = "sha256:47ef93b672eb131a064bbf82575dee2dd66979a6631ed254bcb9e41f8c48c394", size = 5203 },
-]
-
-[[package]]
-name = "peakrdl-cheader"
-version = "1.0.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "jinja2" },
-    { name = "systemrdl-compiler" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/d1/db/ccaa561509f7df5970e2364188ea8b49bf77e510db5eb04701ab8adf943e/peakrdl-cheader-1.0.0.tar.gz", hash = "sha256:c0a27950f30bbe53701b59963802def14ae876eda4415278ad358411a563e4c8", size = 64311 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/9d/e9/3a1c6075a6146b4506937bbbd2719567266c8f01cf6f5a84499f9f610eb4/peakrdl_cheader-1.0.0-py3-none-any.whl", hash = "sha256:8a5da6f29fde7e999cfb9ef530a483ce81499280a1d08273c223449d90b55221", size = 41283 },
-]
-
-[[package]]
-name = "peakrdl-cli"
-version = "1.4.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "systemrdl-compiler" },
-    { name = "tomli", marker = "python_full_version < '3.11'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/60/a8/7fc8cf1aa7ef487ee8726c7aabea878c42593bb7b32a8c42b1879f226583/peakrdl_cli-1.4.0.tar.gz", hash = "sha256:78526c61fdedce1b3ec50a2da190bc52d89f009941bec47e8238e0352374b033", size = 17246 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/7d/0b/465fda51ae0833a2cdcff79efe1f3866ef846b756e0d642feffc46dfb595/peakrdl_cli-1.4.0-py3-none-any.whl", hash = "sha256:a946f8f1cbfd9933b553d9e00b427a2c1214f671d1da145a09988f9ca2bcdc80", size = 22198 },
-]
-
-[[package]]
-name = "peakrdl-html"
-version = "2.11.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "git-me-the-url" },
-    { name = "jinja2" },
-    { name = "markdown" },
-    { name = "python-markdown-math" },
-    { name = "systemrdl-compiler" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/9b/b6/0a9dc9c36f3f809d67c9a8fce89190ad8e3866347a8c3939d815955970ac/peakrdl_html-2.11.0.tar.gz", hash = "sha256:0453f8551d528a9d9505a1c137d8ff6bd9af2a16fc6c10d783f2947f7ad0c25d", size = 11263326 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/16/9a/b4d24bd8e6fc57dc881d88bfb258adbc5efd742b8836707e30dbb413a94f/peakrdl_html-2.11.0-py3-none-any.whl", hash = "sha256:c294a1fd77605d68edaabf29c3f59edf661ff6d2e95e4339855b52adc1e2b3ba", size = 5592037 },
-]
-
-[[package]]
-name = "peakrdl-ipxact"
-version = "3.5.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "systemrdl-compiler" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/a0/f6/af8f79d853081ce9258c60863606291ad5aab9e12eccd050f2e3e8a3a051/peakrdl_ipxact-3.5.0.tar.gz", hash = "sha256:183b9e5412cad7734c25c710ca3722f75f8776b8c20ed38c1d4b83ac409d92d8", size = 71628 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/70/81/778784087d63d004d8db431212153e635d89bd43fd05f61391090211d6f5/peakrdl_ipxact-3.5.0-py3-none-any.whl", hash = "sha256:930460f2b95cf5be52d7fadad416f040b68defbc17c372a58c581ee7195be364", size = 40804 },
-]
-
-[[package]]
-name = "peakrdl-regblock"
-version = "1.1.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "jinja2" },
-    { name = "systemrdl-compiler" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/56/eb/751a6e57ff1e24ba3bd1d6f5e28d09ecc769c6aa44e6ac06f0388133f272/peakrdl_regblock-1.1.0.tar.gz", hash = "sha256:8d351eddbb8884d8cb15056421132444d92896d397c0afc6a251f61809168326", size = 588672 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/c5/8b/d3ce2e287c54c13983f61d725cc1c8b75717be1779597dc24a25855364f3/peakrdl_regblock-1.1.0-py3-none-any.whl", hash = "sha256:ade3f6b3f56641937aa874d7ea2b99ca10cd340a0e71b1ee73ded00a4cbcc070", size = 86886 },
-]
-
-[[package]]
-name = "peakrdl-systemrdl"
-version = "1.0.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "systemrdl-compiler" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/6b/35/4ab40c7aec7f84f576833b8ae9c33ad5f5b14e2df624ccbd3fd5ec30bf3a/peakrdl_systemrdl-1.0.0.tar.gz", hash = "sha256:dd88b16d4cc8957344550b2b3716083604bfd2c60356fef59069477905d1fdfc", size = 15725 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/97/4f/360fbfbb2aef64ba1b0912c22cebf04fd33817aa36b29c5a4439aa3589f8/peakrdl_systemrdl-1.0.0-py3-none-any.whl", hash = "sha256:812b847d31db50c29d557d86f63656f4f98366aac82f36bcd638959c8f744a72", size = 9452 },
-]
-
-[[package]]
-name = "peakrdl-uvm"
-version = "2.3.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "jinja2" },
-    { name = "systemrdl-compiler" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/04/2b/47e2a27147ae1117e9248e926a7d478b6b2e229b30fb2a0bca01870d5ebe/peakrdl-uvm-2.3.0.tar.gz", hash = "sha256:ec18a4fc87d0201fe03ebe0de259a6b7f22be3de1d6908f80bce1e1416bc9cf2", size = 23518 }
-
-[[package]]
 name = "pluggy"
 version = "1.6.0"
 source = { registry = "https://pypi.org/simple" }
@@ -779,18 +639,6 @@ wheels = [
 ]
 
 [[package]]
-name = "python-markdown-math"
-version = "0.9"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "markdown" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/4c/68/fbea05ec6fb318bdcf56ea47596605614554f51d77bfd14f6fb481139ad8/python_markdown_math-0.9.tar.gz", hash = "sha256:567395553dc4941e79b3789a1096dcabb3fda9539d150d558ef3507948b264a3", size = 8680 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/eb/68/ecf3535c40845de2efd8ac2d092dd5fca0868219fa3684d9e58ef7abeece/python_markdown_math-0.9-py3-none-any.whl", hash = "sha256:ac9932df517a5c0f6d01c56e7a44d065eca4a420893ac45f7a6937c67cb41e86", size = 6046 },
-]
-
-[[package]]
 name = "pywin32-ctypes"
 version = "0.2.3"
 source = { registry = "https://pypi.org/simple" }
@@ -806,14 +654,14 @@ source = { editable = "rdl2ot" }
 dependencies = [
     { name = "click" },
     { name = "jinja2" },
-    { name = "peakrdl" },
+    { name = "systemrdl-compiler" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "click", specifier = ">=8.2.1" },
     { name = "jinja2", specifier = ">=3.1.6" },
-    { name = "peakrdl", specifier = ">=1.4.0" },
+    { name = "systemrdl-compiler", specifier = ">=1.29" },
 ]
 
 [[package]]
@@ -821,11 +669,11 @@ name = "rdlexporter"
 version = "0.1.0"
 source = { editable = "rdlexporter" }
 dependencies = [
-    { name = "peakrdl" },
+    { name = "systemrdl-compiler" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "peakrdl", specifier = ">=1.4.0" }]
+requires-dist = [{ name = "systemrdl-compiler", specifier = ">=1.29" }]
 
 [[package]]
 name = "readme-renderer"
@@ -946,15 +794,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/53/a4/f48c9d79cb507ed1373477dbceaba7401fd8a23af63b837fa61f1dcd3691/SecretStorage-3.3.3.tar.gz", hash = "sha256:2403533ef369eca6d2ba81718576c5e0f564d5cca1b58f73a8b23e7d4eeebd77", size = 19739 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/54/24/b4293291fa1dd830f353d2cb163295742fa87f179fcc8a20a306a81978b7/SecretStorage-3.3.3-py3-none-any.whl", hash = "sha256:f356e6628222568e3af06f2eba8df495efa13b3b63081dafd4f7d9a7b7bc9f99", size = 15221 },
-]
-
-[[package]]
-name = "smmap"
-version = "5.0.2"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/44/cd/a040c4b3119bbe532e5b0732286f805445375489fceaec1f48306068ee3b/smmap-5.0.2.tar.gz", hash = "sha256:26ea65a03958fa0c8a1c7e8c7a58fdc77221b8910f6be2131affade476898ad5", size = 22329 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/04/be/d09147ad1ec7934636ad912901c5fd7667e1c858e19d355237db0d0cd5e4/smmap-5.0.2-py3-none-any.whl", hash = "sha256:b30115f0def7d7531d22a0fb6502488d879e75b260a9db4d0819cfb25403af5e", size = 24303 },
 ]
 
 [[package]]
