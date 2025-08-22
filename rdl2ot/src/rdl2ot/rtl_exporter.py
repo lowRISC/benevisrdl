@@ -181,6 +181,7 @@ class OtInterfaceBuilder:
     def get_reg(self, reg: node.RegNode) -> dict:
         """Parse a register and return a dictionary."""
         obj = {"name": reg.inst_name, "type": "reg"}
+        obj["desc"] = reg.get_property("desc", default="")
         obj["width"] = reg.get_property("regwidth")
         obj["hw_readable"] = reg.has_hw_readable
         obj["hw_writable"] = reg.has_hw_writable
