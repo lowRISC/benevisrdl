@@ -130,9 +130,7 @@ class OtInterfaceBuilder:
 
     def get_field(self, field: node.FieldNode) -> dict:
         """Parse a field and return a dictionary."""
-        obj = {}
-        obj["name"] = field.inst_name
-        obj["type"] = "field"
+        obj = {"name": field.inst_name, "type": "field", "type_name": field.type_name}
         obj["desc"] = field.get_property("desc", default="")
         obj["parent_name"] = field.parent.inst_name
         obj["lsb"] = field.lsb
@@ -180,7 +178,7 @@ class OtInterfaceBuilder:
 
     def get_reg(self, reg: node.RegNode) -> dict:
         """Parse a register and return a dictionary."""
-        obj = {"name": reg.inst_name, "type": "reg"}
+        obj = {"name": reg.inst_name, "type": "reg", "type_name": reg.type_name}
         obj["desc"] = reg.get_property("desc", default="")
         obj["width"] = reg.get_property("regwidth")
         obj["hw_readable"] = reg.has_hw_readable
@@ -309,7 +307,7 @@ class OtInterfaceBuilder:
 
     def parse_ip_block(self, ip_block: node.AddrmapNode) -> dict:
         """Parse the ip_block node of an IP block and return a dictionary."""
-        obj = {"name": ip_block.inst_name, "type": "device"}
+        obj = {"name": ip_block.inst_name, "type": "device", "type_name": ip_block.type_name}
         params = self.get_paramesters(ip_block)
         if params:
             obj["parameters"] = params
@@ -357,7 +355,7 @@ class OtInterfaceBuilder:
             print("Error: Top level must be an addrmap")
             raise TypeError
 
-        obj = {"name":root.inst_name, "devices": []}
+        obj = {"name": root.inst_name, "devices": []}
         for child in root.children():
             if isinstance(child, node.AddrmapNode):
                 obj["devices"].append(self.parse_ip_block(child))
