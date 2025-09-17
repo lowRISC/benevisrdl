@@ -11,6 +11,7 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
 from systemrdl import node
 from systemrdl.rdltypes import OnReadType
+from systemrdl.rdltypes.user_struct import UserStruct
 
 from rdl2ot import opentitan
 
@@ -172,6 +173,9 @@ class OtInterfaceBuilder:
         obj["offset"] = mem.address_offset
         obj["size"] = obj["width"] * obj["entries"] // 8
         obj["integrity_bypass"] = mem.get_property("integrity_bypass", default=False)
+        if udps := self.get_udps(mem):
+            obj["udps"] = udps
+
         self.all_async_clk &= bool(mem.get_property("async_clk", default=False))
         self.num_windows += 1
         return obj
@@ -243,6 +247,21 @@ class OtInterfaceBuilder:
             for param in obj.inst.parameters
         ]
 
+    def get_udps(self, obj: node.AddrmapNode | node.RegfileNode) -> [dict]:
+        """Parse the customs properties and return a list of dictionaries."""
+        udps = obj.list_properties(include_native=False)
+        if len(udps) < 1:
+            return None
+        res = {}
+        for name in udps:
+            udp = obj.get_property(name)
+            if isinstance(udp, list) and isinstance(udp[0], UserStruct):
+                res.update({name: [dict(item.members) for item in udp]})
+            else:
+                res.update({name: udp})
+
+        return res
+
     def get_interface(self, addrmap: node.AddrmapNode, defalt_name: None | str = None) -> dict:
         """Parse an interface and return a dictionary."""
         self.num_regs = 0
@@ -308,9 +327,11 @@ class OtInterfaceBuilder:
     def parse_ip_block(self, ip_block: node.AddrmapNode) -> dict:
         """Parse the ip_block node of an IP block and return a dictionary."""
         obj = {"name": ip_block.inst_name, "type": "device", "type_name": ip_block.type_name}
-        params = self.get_paramesters(ip_block)
-        if params:
+        if params := self.get_paramesters(ip_block):
             obj["parameters"] = params
+
+        if udps := self.get_udps(ip_block):
+            obj["udps"] = udps
 
         obj["offsets"] = self.parse_array(ip_block)
         obj["size"] = ip_block.array_stride if ip_block.is_array else ip_block.size
