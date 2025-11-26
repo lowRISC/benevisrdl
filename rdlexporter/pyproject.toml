@@ -10,7 +10,7 @@ requires-python = ">=3.10"
 keywords = ["SystemRDL", "library", "exporter"]
 readme = "README.md"
 dependencies = [
-  "systemrdl-compiler>=1.29",
+    "systemrdl-compiler~=1.32.1",
 ]
 
 authors = [
