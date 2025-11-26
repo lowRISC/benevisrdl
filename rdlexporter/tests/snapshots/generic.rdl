@@ -8,6 +8,12 @@ addrmap generic #(
         } EN[0:0];
     } CTRL_WEN @ 0x0;
 
+    signal {
+        desc = "Fire when fifo is empty.";
+        signalwidth = 0x1;
+        sigtype = SigType::Interrupt;
+    } FIFO_EMPTY;
+
     reg {
         field {
             reset = 0x0;

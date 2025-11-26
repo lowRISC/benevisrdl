@@ -8,3 +8,19 @@ enum MultiBitBool8 {
   True = 0x96;
   False = 0x69;
 };
+
+
+enum SigType {
+  None;
+  Interrupt;     // Signal is an interrupt
+  Alert;         // Signal is an alert
+  Output;        // Signal is an output
+  Input;         // Signal is an input
+  Inout;         // Signal is input and/or output
+};
+
+property sigtype {
+  type = SigType;
+  component = signal;
+  default = SigType::None;
+};

@@ -9,10 +9,16 @@ from pathlib import Path
 
 from systemrdl import RDLCompiler
 from systemrdl.ast.cast import AssignmentCast
-from systemrdl.ast.literals import BoolLiteral, BuiltinEnumLiteral, IntLiteral, StringLiteral
+from systemrdl.ast.literals import (
+    BoolLiteral,
+    BuiltinEnumLiteral,
+    EnumLiteral,
+    IntLiteral,
+    StringLiteral,
+)
 from systemrdl.ast.references import InstRef
-from systemrdl.component import AddressableComponent, Addrmap, Field, Mem, Reg
-from systemrdl.rdltypes import AccessType, OnReadType, OnWriteType
+from systemrdl.component import AddressableComponent, Addrmap, Field, Mem, Reg, Signal
+from systemrdl.rdltypes import AccessType, OnReadType, OnWriteType, UserEnum
 from systemrdl.rdltypes.user_enum import UserEnumMeta
 
 
@@ -75,26 +81,21 @@ class RdlExporter:
             self.stream += self._indent() + expr
 
     def _emit_property(self, properties: dict) -> None:
+        handlers = [
+            (UserEnumMeta, lambda obj: obj.type_name),
+            (BuiltinEnumLiteral, lambda obj: obj.val.name),
+            (StringLiteral, lambda obj: f'''"{obj.get_value()}"'''),
+            (BoolLiteral, lambda obj: str(obj.get_value()).lower()),
+            (IntLiteral, lambda obj: f"0x{obj.get_value():x}"),
+            (str, lambda obj: f'''"{obj}"'''),
+            (bool, lambda obj: str(obj).lower()),
+            (int, lambda obj: f"0x{obj:x}"),
+            (EnumLiteral, lambda obj: f"{type(obj.val).type_name}::{obj.val.name}"),
+            (UserEnum, lambda obj: f"{type(obj).type_name}::{obj.name}"),
+            (AccessType | OnReadType | OnWriteType, lambda obj: obj.name),
+        ]
         for name, obj in properties.items():
-            if isinstance(obj, UserEnumMeta):
-                val = obj.type_name
-            elif isinstance(obj, BuiltinEnumLiteral):
-                val = obj.val.name
-            elif isinstance(obj, AccessType | OnReadType | OnWriteType):
-                val = obj.name
-            elif isinstance(obj, StringLiteral):
-                val = f'''"{obj.get_value()}"'''
-            elif isinstance(obj, BoolLiteral):
-                val = str(obj.get_value()).lower()
-            elif isinstance(obj, IntLiteral):
-                val = f"0x{obj.get_value():x}"
-            elif isinstance(obj, str):
-                val = f'''"{obj}"'''
-            elif isinstance(obj, bool):
-                val = str(obj).lower()
-            elif isinstance(obj, int):
-                val = f"0x{obj:x}"
-            elif isinstance(obj, InstRef):
+            if isinstance(obj, InstRef):
                 # This should be emited at a higher scope indicated by `ref_root._scope_name`.
                 ref = obj.get_value()
                 scope = ref.ref_root._scope_name or ref.ref_root.type_name  # noqa: SLF001
@@ -106,6 +107,11 @@ class RdlExporter:
                     }
                 )
                 continue
+
+            for type_, handler in handlers:
+                if isinstance(obj, type_):
+                    val = handler(obj)
+                    break
             else:
                 print(f"Warning: Type {type(obj)} not implemented, skipping it.")
                 continue
@@ -157,6 +163,17 @@ class RdlExporter:
         self.stream += f"{offset};\n"
         self.ast_path.pop()
 
+    def _emit_signal(self, signal: Signal) -> None:
+        self.ast_path.append(signal.inst_name)
+        self.stream += self._indent() + "signal "
+        self._emit_parameters(signal.parameters)
+        self.stream += "{\n"
+        self.indent_pos += self.indent_width
+        self._emit_property(signal.properties)
+        self.indent_pos -= self.indent_width
+        self.stream += self._indent() + f"}} {signal.inst_name};\n"
+        self.ast_path.pop()
+
     def _emit_field(self, field: Field) -> None:
         self.ast_path.append(field.inst_name)
         self.stream += self._indent() + "field "
@@ -202,6 +219,8 @@ class RdlExporter:
                 self._emit_addrmap(child.inst_name, child)
             elif isinstance(child, Mem):
                 self._emit_mem(child)
+            elif isinstance(child, Signal):
+                self._emit_signal(child)
             else:
                 self._raise_type_error(type(child))
             self._emit_dynamic_assignment()

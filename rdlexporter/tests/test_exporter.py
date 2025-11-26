@@ -6,6 +6,7 @@
 
 from pathlib import Path
 
+import systemrdl
 from systemrdl import RDLCompiler, RDLImporter, rdltypes
 from systemrdl.ast.references import InstRef
 from systemrdl.core.parameter import Parameter
@@ -57,7 +58,7 @@ def test_importer(tmp_path: Path) -> None:
     output_file = tmp_path / "generic.rdl"
 
     rdlc = RDLCompiler()
-
+    rdlc.compile_file(SNAPSHOTS_DIR / "user_defined.rdl")
     imp = RDLImporter(rdlc)
     imp.default_src_ref = FileSourceRef(tmp_path)
 
@@ -78,6 +79,14 @@ def test_importer(tmp_path: Path) -> None:
     imp.assign_property(field_en, "reset", 0x00)
     imp.assign_property(field_en, "swmod", value=True)
     imp.assign_property(field_en, "desc", "Enable the ip")
+
+    signal_t = imp._create_definition(systemrdl.component.Signal, "interrupt", None)  # noqa: SLF001
+    signal = imp._instantiate(signal_t, "FIFO_EMPTY", None)  # noqa: SLF001
+    imp.assign_property(signal, "desc", "Fire when fifo is empty.")
+    imp.assign_property(signal, "signalwidth", 1)
+    enum = imp.compiler.namespace.lookup_type("SigType")
+    imp.assign_property(signal, "sigtype", enum["Interrupt"])
+    addrmap.children.append(signal)
 
     field_mode = imp.create_field_definition("MODE")
     field_mode = imp.instantiate_field(field_mode, "MODE", 2, 8)

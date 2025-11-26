@@ -4,6 +4,11 @@ addrmap uart #(
     longint param1 = 1,
     longint param2 = 2
 ){
+    signal {
+        signalwidth = 0x1;
+        sigtype = SigType::Interrupt;
+    } TX_FIFO_EMPTY;
+
     reg {
         desc = "Interrupt state register.";
         field {
