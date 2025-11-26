@@ -159,7 +159,7 @@ class RdlExporter:
         self.stream += "#(\n"
         self.indent_pos += self.indent_width
         for index, param in enumerate(parameters):
-            val = param.get_value()
+            val = param.get_value() or param._value # noqa: SLF001
             if isinstance(val, int) or param.param_type.is_integer:
                 type_ = "longint"
             else:

@@ -26,6 +26,7 @@ def _run_ip_test_from_file(tmp_path: Path, ip_block: str) -> None:
 
     rdlc = RDLCompiler()
     rdlc.compile_file(input_rdl)
+    rdlc.elaborate()
 
     # Include the user defined enums and properties.
     with output_file.open("w") as f:
@@ -125,11 +126,11 @@ def test_importer(tmp_path: Path) -> None:
     value = 0x56
     param = Parameter(rdltypes.get_rdltype(value), "Width")
     param._value = value  # noqa: SLF001
-    root_addrmap.parameters.append(param)
+    root_addrmap.parameters_dict["Width"] = param
+
     inst = type_({"name": "interface", "enable": True})
     imp.assign_property(root_addrmap, "udp_config", inst)
 
-    root_addrmap.properties["bridge"] = True
     imp.register_root_component(root_addrmap)
 
     RdlExporter(rdlc).export(output_file)

@@ -5,7 +5,6 @@ addrmap root #(
         name : "interface",
         enable : true
     };
-    bridge = true;
     addrmap {
         is_interface = true;
         udp_config = udp_struct'{
