@@ -17,7 +17,15 @@ from systemrdl.ast.literals import (
     StringLiteral,
 )
 from systemrdl.ast.references import InstRef
-from systemrdl.component import AddressableComponent, Addrmap, Field, Mem, Reg, Signal
+from systemrdl.component import (
+    AddressableComponent,
+    Addrmap,
+    Field,
+    Mem,
+    Reg,
+    Signal,
+    VectorComponent,
+)
 from systemrdl.rdltypes import AccessType, OnReadType, OnWriteType, UserEnum
 from systemrdl.rdltypes.user_enum import UserEnumMeta
 
@@ -43,13 +51,6 @@ class RdlExporter:
 
     def _is_nested(self) -> bool:
         return self.indent_pos > 0
-
-    def _get_field_limits(self, field: Field) -> (int, int):
-        return (
-            (field.msb, field.lsb)
-            if isinstance(field.msb, int)
-            else (field.msb.get_value(), field.lsb.get_value())
-        )
 
     def _get_offset(self, comp: AddressableComponent) -> str:
         if isinstance(comp.addr_offset, AssignmentCast):
@@ -129,6 +130,17 @@ class RdlExporter:
         dim = self._get_register_array_dim(component)
         return f"[{dim}]"
 
+    def _vector(self, component: VectorComponent) -> str:
+        if component.msb is None and component.lsb is None:
+            return ""
+
+        msb, lsb = (
+            (component.msb, component.lsb)
+            if isinstance(component.msb, int)
+            else (component.msb.get_value(), component.lsb.get_value())
+        )
+        return f"[{msb}:{lsb}]"
+
     def _emit_parameters(self, parameters: list) -> None:
         if not len(parameters):
             return
@@ -171,7 +183,7 @@ class RdlExporter:
         self.indent_pos += self.indent_width
         self._emit_property(signal.properties)
         self.indent_pos -= self.indent_width
-        self.stream += self._indent() + f"}} {signal.inst_name};\n"
+        self.stream += self._indent() + f"}} {signal.inst_name}" + self._vector(signal) + ";\n"
         self.ast_path.pop()
 
     def _emit_field(self, field: Field) -> None:
@@ -182,8 +194,7 @@ class RdlExporter:
         self.indent_pos += self.indent_width
         self._emit_property(field.properties)
         self.indent_pos -= self.indent_width
-        msb, lsb = self._get_field_limits(field)
-        self.stream += self._indent() + f"}} {field.inst_name}[{msb}:{lsb}];\n"
+        self.stream += self._indent() + f"}} {field.inst_name}" + self._vector(field) + ";\n"
         self.ast_path.pop()
 
     def _emit_register(self, register: Reg) -> None:
