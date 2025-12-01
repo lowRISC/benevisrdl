@@ -1,35 +1,48 @@
-addrmap generic #(
+addrmap root #(
     longint Width = 86
 ){
-    reg {
-        field {
-            desc = "Enable the ip";
-            sw = rw;
-        } EN[0:0];
-    } CTRL_WEN @ 0x0;
+    udp_config = udp_struct'{
+        name : "interface",
+        enable : true
+    };
+    bridge = true;
+    addrmap {
+        is_interface = true;
+        udp_config = udp_struct'{
+            name : "racl",
+            enable : true
+        };
+        reg {
+            field {
+                desc = "Enable the ip";
+                sw = rw;
+            } EN[0:0];
+        } CTRL_WEN @ 0x0;
 
-    signal {
-        desc = "Fire when fifo is empty.";
-        signalwidth = 0x1;
-        sigtype = SigType::Interrupt;
-    } FIFO_EMPTY;
+        signal {
+            desc = "Fire when fifo is empty.";
+            signalwidth = 0x1;
+            sigtype = SigType::Interrupt;
+        } FIFO_EMPTY;
 
-    reg {
-        field {
-            reset = 0x0;
-            swmod = true;
-            desc = "Enable the ip";
-        } EN[0:0];
-        field {
-            reset = 0x7;
-            swmod = false;
-            desc = "Define the mode.";
-            sw = rw;
-            onread = rclr;
-            onwrite = woset;
-            hw = rw;
-        } MODE[9:2];
-    } CTRL[4] @ 0x4;
-    CTRL.MODE -> swwe = CTRL_WEN.EN;
+        reg {
+            field {
+                reset = 0x0;
+                swmod = true;
+                desc = "Enable the ip";
+            } EN[0:0];
+            field {
+                reset = 0x7;
+                swmod = false;
+                desc = "Define the mode.";
+                sw = rw;
+                onread = rclr;
+                onwrite = woset;
+                hw = rw;
+            } MODE[9:2];
+        } CTRL[4] @ 0x4;
+        CTRL.MODE -> swwe = CTRL_WEN.EN;
+
+    } GENERIC;
 
 };
