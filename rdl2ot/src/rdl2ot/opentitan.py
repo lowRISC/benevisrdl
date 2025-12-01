@@ -5,6 +5,7 @@
 """Functions with opentitan specific logic."""
 
 import re
+from enum import Enum
 
 from systemrdl import node
 from systemrdl.rdltypes import AccessType, OnReadType, OnWriteType
@@ -127,3 +128,33 @@ def is_homogeneous(reg: dict) -> bool:
     ]
     names = {re.sub(r"_\d+$", "", f["name"]) for f in reg["fields"]}
     return all(f == unamed_fields[0] for f in unamed_fields[1:]) and len(names) == 1
+
+
+class SigType(Enum):
+    """Used to give a signal different purposes."""
+
+    NONE = "None"
+    Interrupt = "Interrupt"
+    Alert = "Alert"
+    InterModReqRsp = "InterModReqRsp"
+    InterModReq = "InterModReq"
+    InterModRecv = "InterModRecv"
+    InOut = "InOut"
+    Input = "Input"
+    Output = "Output"
+
+    def is_pad(self) -> bool:
+        """Check whether a signal is a pad."""
+        return self in [SigType.InOut, SigType.Input, SigType.Output]
+
+    def is_interrupt(self) -> bool:
+        """Check whether a signal is a interrupt."""
+        return self in [SigType.Interrupt]
+
+    def is_alert(self) -> bool:
+        """Check whether a signal is a alert."""
+        return self in [SigType.Alert]
+
+    def is_inter_module(self) -> bool:
+        """Check whether a signal is a inter module."""
+        return self in [SigType.InterModReqRsp, SigType.InterModReq, SigType.InterModRecv]

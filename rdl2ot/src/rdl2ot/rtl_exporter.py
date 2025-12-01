@@ -67,33 +67,6 @@ def _export(ip_block: dict, out_dir: Path) -> None:
         print(f"Generated {path}.")
 
 
-class SigType(Enum):
-    """Used to give a signal different purposes."""
-
-    NONE = "None"
-    PadInOut = "PadInOut"
-    PadInput = "PadInput"
-    PadOutput = "PadOutput"
-    Interrupt = "Interrupt"
-
-    def is_pad(self) -> bool:
-        """Check whether a signal is a pad."""
-        return self in [SigType.PadInOut, SigType.PadInput, SigType.PadOutput]
-
-    def is_interrupt(self) -> bool:
-        """Check whether a signal is a interrupt."""
-        return self in [SigType.Interrupt]
-
-
-class IoCombine(Enum):
-    """May be used when a signal is a pad."""
-
-    NONE = "None"
-    Mux = "Mux"
-    And = "And"
-    Or = "Or"
-
-
 class OtInterfaceBuilder:
     """OpenTitan Interface Builder."""
 
@@ -109,12 +82,8 @@ class OtInterfaceBuilder:
         """Parse a signal and return a dict."""
         obj = {}
         obj["name"] = sig.inst_name
-        kind = sig.get_property("sigtype")
-        obj["type"] = kind.name
-        if SigType(kind.name).is_pad():
-            obj["width"] = sig.get_property("signalwidth")
-            if combine := sig.get_property("io_combine"):
-                obj["combine"] = combine.name
+        obj["width"] = sig.get_property("signalwidth")
+        obj.update(self.get_udps(sig))
         return obj
 
     def parse_array(self, node_: node.AddressableNode) -> list:
@@ -240,6 +209,22 @@ class OtInterfaceBuilder:
         self.reg_index += array_size
         return obj
 
+    def parse_signal(self, interface: dict[str, dict], sig: node.SignalNode) -> None:
+        """Parse a signal node and return a dictionary."""
+        signal = self.get_signal(sig)
+        if "sigtype" not in signal:
+            interface["signals"].append(signal)
+        elif opentitan.SigType(signal["sigtype"]).is_pad():
+            interface["pads"].append(signal)
+        elif opentitan.SigType(signal["sigtype"]).is_interrupt():
+            interface["interrupts"].append(signal["name"])
+        elif opentitan.SigType(signal["sigtype"]).is_alert():
+            interface["alerts"].append(signal["name"])
+        elif opentitan.SigType(signal["sigtype"]).is_inter_module():
+            interface["inter_modules"].append(signal)
+        else:
+            print(f"WARNING: Unsupported signal type: {signal}.")
+
     def get_paramesters(self, obj: node.AddrmapNode | node.RegfileNode) -> [dict]:
         """Parse the custom property localparams and return a list of  dictionaries."""
         return [
@@ -316,12 +301,6 @@ class OtInterfaceBuilder:
         interface["any_integrity_bypass"] = any(
             win["integrity_bypass"] for win in interface["windows"]
         )
-        interface["alerts"] = [
-            f["name"]
-            for reg in interface["regs"]
-            for f in reg["fields"]
-            if reg["name"] == "ALERT_TEST"
-        ]
         return interface
 
     def parse_ip_block(self, ip_block: node.AddrmapNode) -> dict:
@@ -340,19 +319,14 @@ class OtInterfaceBuilder:
         obj["alerts"] = []
         obj["pads"] = []
         obj["interrupts"] = []
+        obj["signals"] = []
+        obj["inter_modules"] = []
         for child in ip_block.children():
             if isinstance(child, node.AddrmapNode):
                 child_obj = self.get_interface(child, DEFAULT_INTERFACE_NAME)
                 obj["interfaces"].append(child_obj)
-                obj["alerts"].extend(child_obj["alerts"])
             elif isinstance(child, node.SignalNode):
-                signal = self.get_signal(child)
-                if SigType(signal["type"]).is_pad():
-                    obj["pads"].append(signal)
-                elif SigType(signal["type"]).is_interrupt():
-                    obj["interrupts"].append(signal)
-                else:
-                    print(f"WARNING: Unsupported signal type: {signal}.")
+                    self.parse_signal(obj, child)
             elif isinstance(child, node.RegNode | node.MemNode | node.RegfileNode):
                 continue
             else:
@@ -363,7 +337,6 @@ class OtInterfaceBuilder:
         if len(ip_block.registers()) > 0:
             interface = self.get_interface(ip_block)
             obj["interfaces"].append(interface)
-            obj["alerts"].extend(interface["alerts"])
 
         return obj
 

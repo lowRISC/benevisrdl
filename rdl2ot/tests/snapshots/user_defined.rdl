@@ -1,3 +1,5 @@
+`ifndef UDP_RDL
+`define UDP_RDL
 
 enum MultiBitBool4 {
   True = 0x6;
@@ -8,3 +10,23 @@ enum MultiBitBool8 {
   True = 0x96;
   False = 0x69;
 };
+
+enum SigType {
+  None;
+  Interrupt;     // Signal is an interrupt
+  Alert;         // Signal is an alert
+  InterModReqRsp;// Signal is an inter module, with type=req_rsp
+  InterModReq;   // Signal is an inter module, with type=uni and act=req
+  InterModRecv;  // Signal is an inter module, with type=uni and act=recv
+  Output;        // Signal is an output
+  Input;         // Signal is an input
+  InOut;         // Signal is input and/or output
+};
+
+property sigtype {
+  type = SigType;
+  component = signal;
+  default = SigType::None;
+};
+
+`endif

@@ -1,4 +1,13 @@
+`include "user_defined.rdl"
+
 addrmap uart {
+
+    signal {
+        desc = "";
+        signalwidth = 0x1;
+        sigtype = SigType::Alert;
+    } FATAL_FAULT;
+
     regfile signals {
       default sw = rw;
       reg {
