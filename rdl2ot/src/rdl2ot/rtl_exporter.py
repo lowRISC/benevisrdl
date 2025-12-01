@@ -5,12 +5,11 @@
 """Export RDL to opentitan RTL."""
 
 import json
-from enum import Enum
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
 from systemrdl import node
-from systemrdl.rdltypes import OnReadType
+from systemrdl.rdltypes import OnReadType, UserEnum
 from systemrdl.rdltypes.user_struct import UserStruct
 
 from rdl2ot import opentitan
@@ -232,18 +231,30 @@ class OtInterfaceBuilder:
             for param in obj.inst.parameters
         ]
 
+    def parse_type(self, key:str, node: dict) -> dict:
+        """Parse the custom properties and return a list of dictionaries."""
+        if isinstance(node, UserStruct):
+            obj = {}
+            for k,v in node.members.items():
+                obj.update(self.parse_type(k, v))
+            return {key: obj}
+        if isinstance(node, list):
+            vec = [self.parse_type(key, item) for item in node]
+            return {key: vec}
+        if isinstance(node, UserEnum):
+            return {key: node.name}
+
+        return {key: node}
+
     def get_udps(self, obj: node.AddrmapNode | node.RegfileNode) -> [dict]:
-        """Parse the customs properties and return a list of dictionaries."""
+        """Parse the custom properties and return a list of dictionaries."""
         udps = obj.list_properties(include_native=False)
         if len(udps) < 1:
             return None
         res = {}
         for name in udps:
             udp = obj.get_property(name)
-            if isinstance(udp, list) and isinstance(udp[0], UserStruct):
-                res.update({name: [dict(item.members) for item in udp]})
-            else:
-                res.update({name: udp})
+            res.update(self.parse_type(name,  udp))
 
         return res
 
@@ -259,6 +270,9 @@ class OtInterfaceBuilder:
         interface = {}
         if defalt_name:
             interface["name"] = addrmap.inst_name or defalt_name
+
+        if udps := self.get_udps(addrmap):
+            interface["udps"] = udps
 
         interface["regs"] = []
         interface["windows"] = []
