@@ -24,3 +24,19 @@ property sigtype {
   component = signal;
   default = SigType::None;
 };
+
+struct udp_struct {
+  string name;
+  boolean enable;
+};
+
+property udp_config {
+  type = udp_struct;
+  component = addrmap;
+};
+
+property is_interface {
+  type = boolean;
+  component = addrmap;
+  default = false;
+};

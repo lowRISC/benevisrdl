@@ -62,7 +62,9 @@ def test_importer(tmp_path: Path) -> None:
     imp = RDLImporter(rdlc)
     imp.default_src_ref = FileSourceRef(tmp_path)
 
+    root_addrmap = imp.create_addrmap_definition("root")
     addrmap = imp.create_addrmap_definition("generic")
+    addrmap = imp.instantiate_addrmap(addrmap, "GENERIC", 0x00)
 
     field_wen = imp.create_field_definition("EN")
     field_wen = imp.instantiate_field(field_wen, "EN", 0, 1)
@@ -114,14 +116,28 @@ def test_importer(tmp_path: Path) -> None:
     reg = imp.instantiate_reg(reg, "CTRL", 0x04, [4], 0x04)
     imp.add_child(addrmap, reg)
 
+    imp.assign_property(addrmap, "is_interface", True) # noqa: FBT003
+    type_ = imp.compiler.namespace.lookup_type("udp_struct")
+    inst = type_({"name": "racl", "enable": True})
+    imp.assign_property(addrmap, "udp_config", inst)
+
+    imp.add_child(root_addrmap, addrmap)
     value = 0x56
     param = Parameter(rdltypes.get_rdltype(value), "Width")
     param._value = value  # noqa: SLF001
-    addrmap.parameters.append(param)
+    root_addrmap.parameters.append(param)
+    inst = type_({"name": "interface", "enable": True})
+    imp.assign_property(root_addrmap, "udp_config", inst)
 
-    imp.register_root_component(addrmap)
+    root_addrmap.properties["bridge"] = True
+    imp.register_root_component(root_addrmap)
 
     RdlExporter(rdlc).export(output_file)
+
+    # Check that the generated file is valid rdl by compiling it.
+    rdlc = RDLCompiler()
+    rdlc.compile_file(SNAPSHOTS_DIR / "user_defined.rdl")
+    rdlc.compile_file(output_file)
 
     actual_output_content = output_file.read_text(encoding="utf-8")
     assert actual_output_content == snapshot_content, (

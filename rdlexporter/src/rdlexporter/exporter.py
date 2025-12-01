@@ -28,6 +28,7 @@ from systemrdl.component import (
 )
 from systemrdl.rdltypes import AccessType, OnReadType, OnWriteType, UserEnum
 from systemrdl.rdltypes.user_enum import UserEnumMeta
+from systemrdl.rdltypes.user_struct import UserStruct
 
 
 @dataclass
@@ -81,7 +82,16 @@ class RdlExporter:
             expr = f"{left_expr} = {right_expr};\n"
             self.stream += self._indent() + expr
 
-    def _emit_property(self, properties: dict) -> None:
+    def _emit_user_struct(self, data: UserStruct) -> None:
+        self.stream += f"{data.type_name}'{{\n"
+        self.indent_pos += self.indent_width
+        self._emit_property(data.members, ":", ",")
+        # Dropping the trailing comma because Systemrdl doesn't like it.
+        self.stream = self.stream[:-2] + self.stream[-1]
+        self.indent_pos -= self.indent_width
+        self.stream += self._indent() + "};\n"
+
+    def _emit_property(self, properties: dict, assign_op: str = "=", endline: str = ";") -> None:
         handlers = [
             (UserEnumMeta, lambda obj: obj.type_name),
             (BuiltinEnumLiteral, lambda obj: obj.val.name),
@@ -93,8 +103,10 @@ class RdlExporter:
             (int, lambda obj: f"0x{obj:x}"),
             (EnumLiteral, lambda obj: f"{type(obj.val).type_name}::{obj.val.name}"),
             (UserEnum, lambda obj: f"{type(obj).type_name}::{obj.name}"),
+            (UserStruct, self._emit_user_struct),
             (AccessType | OnReadType | OnWriteType, lambda obj: obj.name),
         ]
+
         for name, obj in properties.items():
             if isinstance(obj, InstRef):
                 # This should be emited at a higher scope indicated by `ref_root._scope_name`.
@@ -111,13 +123,12 @@ class RdlExporter:
 
             for type_, handler in handlers:
                 if isinstance(obj, type_):
-                    val = handler(obj)
+                    self.stream += self._indent() + f"{name} {assign_op} "
+                    if val:= handler(obj):
+                        self.stream += f"{val}{endline}\n"
                     break
             else:
                 print(f"Warning: Type {type(obj)} not implemented, skipping it.")
-                continue
-
-            self.stream += self._indent() + f"{name} = {val};\n"
 
     def _arrays(self, component: Reg) -> str:
         if not component.is_array:
@@ -223,6 +234,7 @@ class RdlExporter:
         self._emit_parameters(addrmap.parameters)
         self.stream += "{\n"
         self.indent_pos += self.indent_width
+        self._emit_property(addrmap.properties)
         for child in addrmap.children:
             if isinstance(child, Reg):
                 self._emit_register(child)
