@@ -14,6 +14,24 @@ addrmap lc_ctrl #(
     longint NumManufStateWords = 8,
     longint NumAlerts = 3
 ){
+    signal {
+        desc = "";
+        signalwidth = 0x1;
+        sigtype = SigType::Alert;
+    } FATAL_PROG_ERROR;
+
+    signal {
+        desc = "";
+        signalwidth = 0x1;
+        sigtype = SigType::Alert;
+    } FATAL_STATE_ERROR;
+
+    signal {
+        desc = "";
+        signalwidth = 0x1;
+        sigtype = SigType::Alert;
+    } FATAL_BUS_INTEG_ERROR;
+
     addrmap {
         external reg {
             field {
