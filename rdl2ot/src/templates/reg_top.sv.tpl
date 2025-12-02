@@ -13,7 +13,17 @@
 {%- set num_regs_digits = interface.num_regs | string | length %}
 {%- set clk_name = "aon_" %}
 
-module {{ name|lower }}{{interface_name}}_reg_top (
+module {{ name|lower }}{{interface_name}}_reg_top {{"(" if not udps.bus_interface_cfg.racl_support }}
+{%- if udps.bus_interface_cfg.racl_support %}
+  # (
+    parameter bit          EnableRacl           = 1'b0,
+    parameter bit          RaclErrorRsp         = 1'b1{{"," if udps.bus_interface_cfg.racl_support }}
+  {%- if udps.bus_interface_cfg.racl_support %}
+    parameter top_racl_pkg::racl_policy_sel_t RaclPolicySelVec[{{ "{}_reg_pkg::NumRegs{}".format(name|lower, interface.name|camelcase) }}] =
+      {{ "'{{{}_reg_pkg::NumRegs{}{{0}}}}".format(name|lower, interface.name|camelcase) }}
+  {%- endif %}
+  ) (
+{%- endif %}
   input clk_i,
   input rst_ni,
 {%- if interface.any_async_clk %}
@@ -35,6 +45,7 @@ module {{ name|lower }}{{interface_name}}_reg_top (
 {%- endif %}
 
 {%- if has_regs %}
+
   // To HW
   output {{ name|lower }}_reg_pkg::{{ name|lower }}{{interface_name}}_reg2hw_t reg2hw, // Write
   input  {{ name|lower }}_reg_pkg::{{ name|lower }}{{interface_name}}_hw2reg_t hw2reg, // Read
@@ -45,6 +56,13 @@ module {{ name|lower }}{{interface_name}}_reg_top (
   output logic shadowed_storage_err_o,
   output logic shadowed_update_err_o,
 
+{%- endif %}
+
+{%- if udps.bus_interface_cfg.racl_support %}
+
+  // RACL interface
+  input  top_racl_pkg::racl_policy_vec_t racl_policies_i,
+  output top_racl_pkg::racl_error_log_t  racl_error_o,
 {%- endif %}
 
   // Integrity check errors
@@ -192,12 +210,10 @@ module {{ name|lower }}{{interface_name}}_reg_top (
   {%- if interface.num_regs > 0 %}
   assign tl_reg_h2d = tl_socket_h2d[{{ interface.num_windows }}];
   assign tl_socket_d2h[{{ interface.num_windows }}] = tl_reg_d2h;
-
   {%- endif %}
-
+{{ space }}  
   {%- for win in windows %}
     {%- set win_suff = "[{}]".format(loop.index0) if interface.num_windows > 1 %}
-
   assign tl_win_o{{ win_suff }} = tl_socket_h2d[{{ loop.index0 }}];
   assign tl_socket_d2h[{{ loop.index0 }}] = tl_win_i{{ win_suff }};
   {%- endfor %}
@@ -207,12 +223,12 @@ module {{ name|lower }}{{interface_name}}_reg_top (
     .N            ({{ num_dsp }}),
     .HReqPass     (1'b1),
     .HRspPass     (1'b1),
-    .DReqPass     ({ {{- num_dsp -}} {1'b1} }),
-    .DRspPass     ({ {{- num_dsp -}} {1'b1} }),
+    .DReqPass     {{"({{{}{{1'b1}}}})".format(num_dsp) }},
+    .DRspPass     {{"({{{}{{1'b1}}}})".format(num_dsp) }},
     .HReqDepth    (4'h0),
     .HRspDepth    (4'h0),
-    .DReqDepth    ({ {{-  num_dsp -}} {4'h0} }),
-    .DRspDepth    ({ {{- num_dsp -}} {4'h0} }),
+    .DReqDepth    {{"({{{}{{4'h0}}}})".format(num_dsp) }},
+    .DRspDepth    {{"({{{}{{4'h0}}}})".format(num_dsp) }},
     .ExplicitErrs (1'b0)
   ) u_socket (
     .clk_i  (clk_i),
@@ -263,7 +279,10 @@ module {{ name|lower }}{{interface_name}}_reg_top (
     .be_o    (reg_be),
     .busy_i  (reg_busy),
     .rdata_i (reg_rdata),
-    .error_i (reg_error)
+  {%- if udps.bus_interface_cfg.racl_support %}
+    // Translate RACL error to TLUL error if enabled
+  {%- endif %}
+    .error_i (reg_error{{" | (RaclErrorRsp & racl_error_o.valid)" if udps.bus_interface_cfg.racl_support }})
   );
 
   // cdc oversampling signals
@@ -485,7 +504,8 @@ module {{ name|lower }}{{interface_name}}_reg_top (
   //   F{{ '[{}{}]: {}:{}'.format(field.name, multireg_suffix, field.msb, field.lsb)|lower }}
       {%- endif %}
   prim_subreg{{ '_ext' if reg.external else ('_shadow' if reg.shadowed) }} #(
-    .DW    ({{ field.width }})
+      {%- set align_width = 4 if reg.external else 6 %}
+    .DW{{ "{space:>{width}}({num})".format(space=" ", num=field.width, width=align_width) }}
       {%- if not reg.external -%}
     ,
     .SwAccess(prim_subreg_pkg::SwAccess{{ field.opentitan.reggen_sw_access }}),
@@ -549,7 +569,41 @@ module {{ name|lower }}{{interface_name}}_reg_top (
 {%- if has_regs %}
 
   logic [{{interface.num_regs - 1 }}:0] addr_hit;
+  {%- if udps.bus_interface_cfg.racl_support %}
+  top_racl_pkg::racl_role_vec_t racl_role_vec;
+  top_racl_pkg::racl_role_t racl_role;
+
+  logic [{{interface.num_regs - 1 }}:0] racl_addr_hit_read;
+  logic [{{interface.num_regs - 1 }}:0] racl_addr_hit_write;
+
+  if (EnableRacl) begin : gen_racl_role_logic
+    // Retrieve RACL role from user bits and one-hot encode that for the comparison bitmap
+    assign racl_role = top_racl_pkg::tlul_extract_racl_role_bits(tl_i.a_user.rsvd);
+
+    prim_onehot_enc #(
+      .OneHotWidth( $bits(top_racl_pkg::racl_role_vec_t) )
+    ) u_racl_role_encode (
+      .in_i ( racl_role     ),
+      .en_i ( 1'b1          ),
+      .out_o( racl_role_vec )
+    );
+    {%- if udps.static_racl_support %}
+    // For the static RACL assignment for racl_ctrl only one role (ROT_PRIVATE) is used,
+    // leaving others unread. Intentionally read them to avoid linting errors.
+    logic unused_role_vec;
+    assign unused_role_vec = ^racl_role_vec;
+  {%- endif %}
+  end else begin : gen_no_racl_role_logic
+    assign racl_role     = '0;
+    assign racl_role_vec = '0;
+  end
+  {%- endif %}
+
   always_comb begin
+  {%- if udps.bus_interface_cfg.racl_support %}
+    racl_addr_hit_read  = '0;
+    racl_addr_hit_write = '0;
+  {%- endif %}
   {%- set ns = namespace(counter=0) %}
   {%- for reg in registers %}
     {%- for offset in reg.offsets %}
@@ -558,22 +612,65 @@ module {{ name|lower }}{{interface_name}}_reg_top (
     addr_hit[{{ index }}] = (reg_addr == {{ (name ~ '_' ~ reg.name)|upper }}{% if reg.offsets|length > 1 %}_{{ loop.index0 }}{% endif %}_OFFSET);
     {%- endfor %}
   {%- endfor %}
+  {%- if udps.bus_interface_cfg.racl_support %}
+
+    if (EnableRacl) begin : gen_racl_hit
+      for (int unsigned slice_idx = 0; slice_idx < {{interface.num_regs}}; slice_idx++) begin
+    {%- if not udps.static_racl_support %}
+        racl_addr_hit_read[slice_idx] =
+            addr_hit[slice_idx] & (|(racl_policies_i[RaclPolicySelVec[slice_idx]].read_perm
+                                      & racl_role_vec));
+        racl_addr_hit_write[slice_idx] =
+            addr_hit[slice_idx] & (|(racl_policies_i[RaclPolicySelVec[slice_idx]].write_perm
+                                      & racl_role_vec));
+    {%- else %}
+        // Static RACL protection with ROT_PRIVATE policy
+        racl_addr_hit_read[slice_idx] =
+          addr_hit[slice_idx] & (|(top_racl_pkg::RACL_POLICY_ROT_PRIVATE_RD & racl_role_vec));
+        racl_addr_hit_write[slice_idx] =
+          addr_hit[slice_idx] & (|(top_racl_pkg::RACL_POLICY_ROT_PRIVATE_WR & racl_role_vec));
+    {%- endif %}
+      end
+    end else begin : gen_no_racl
+      racl_addr_hit_read  = addr_hit;
+      racl_addr_hit_write = addr_hit;
+    end
+  {%- endif %}
   end
 
   assign addrmiss = (reg_re || reg_we) ? ~|addr_hit : 1'b0 ;
+
+  {%- if udps.bus_interface_cfg.racl_support %}
+  // A valid address hit, access, but failed the RACL check
+  assign racl_error_o.valid = |addr_hit & ((reg_re & ~|racl_addr_hit_read) |
+                                           (reg_we & ~|racl_addr_hit_write));
+  assign racl_error_o.request_address = top_pkg::TL_AW'(reg_addr);
+  assign racl_error_o.racl_role       = racl_role;
+  assign racl_error_o.overflow        = 1'b0;
+
+  if (EnableRacl) begin : gen_racl_log
+    assign racl_error_o.ctn_uid     = top_racl_pkg::tlul_extract_ctn_uid_bits(tl_i.a_user.rsvd);
+    assign racl_error_o.read_access = tl_i.a_opcode == tlul_pkg::Get;
+  end else begin : gen_no_racl_log
+    assign racl_error_o.ctn_uid     = '0;
+    assign racl_error_o.read_access = 1'b0;
+  end
+  {%- endif %}
 
   // Check sub-word write is permitted
   always_comb begin
     wr_err = (reg_we &
   {%- set ns = namespace(counter=0) %}
   {%- set interface_name = ("_" + interface.name|lower) if interface.name -%}
+  {%- set wr_addr_hit = "racl_addr_hit_write" if udps.bus_interface_cfg.racl_support else "addr_hit" %}
+  {%- set rd_addr_hit = "racl_addr_hit_read" if udps.bus_interface_cfg.racl_support else "addr_hit" %}
   {%- for reg in registers %}
     {%- set outer_loop = loop -%}
     {%- for offset in reg.offsets %}
       {%- set index = "{num:>{width}}".format(num=ns.counter, width=num_regs_digits) %}
       {%- set ns.counter = ns.counter + 1 %}
               {{"(" if loop.first and outer_loop.first else " " -}}
-               (addr_hit[{{ index }}] & (|({{ (name ~ interface_name)|upper}}_PERMIT[{{ index }}] & ~reg_be))) 
+              {{"({}[{}] & (|({}_PERMIT[{}] & ~reg_be)))".format(wr_addr_hit , index,(name ~ interface_name)|upper, index ) }}
       {%- if loop.last and outer_loop.last %}));{% else %} |{% endif %}
     {%- endfor %}
   {%- endfor %}
@@ -586,10 +683,10 @@ module {{ name|lower }}{{interface_name}}_reg_top (
       {%- set reg_suffix = ('_' ~ loop.index0|string) if reg.offsets|length > 1 %}
       {%- set regname = "{}{}".format(reg.name, reg_suffix)|lower %}
       {%- if reg.opentitan.needs_read_en %}
-  assign {{ regname }}_re = addr_hit[{{ ns.re_index }}] & reg_re & !reg_error;
+  assign {{ regname }}_re = {{rd_addr_hit}}[{{ ns.re_index }}] & reg_re & !reg_error;
       {%- endif %}
       {%- if reg.opentitan.needs_write_en %}
-  assign {{ regname }}_we = addr_hit[{{ ns.re_index }}] & reg_we & !reg_error;
+  assign {{ regname }}_we = {{wr_addr_hit}}[{{ ns.re_index }}] & reg_we & !reg_error;
       {%- endif %}
       {%- set ns.re_index = ns.re_index + 1 %}
       {%- for field in reg.fields %}
@@ -625,7 +722,7 @@ module {{ name|lower }}{{interface_name}}_reg_top (
   {%- for reg in registers %}
     {%- for offset in reg.offsets %}
       {%- set reg_suffix = ('_' ~ loop.index0|string) if reg.offsets|length > 1 and not (reg.opentitan.is_homogeneous and reg.is_multifields)  %}
-      addr_hit[{{ ns.counter }}]: begin
+      {{rd_addr_hit}}[{{ ns.counter }}]: begin
       {%- set ns.counter = ns.counter + 1 %}
       {%- if reg.async_clk %}
         reg_rdata_next = DW'({{ "{}{}_qs".format(reg.name, reg_suffix)|lower }});
@@ -738,6 +835,10 @@ module {{ name|lower }}{{interface_name}}_reg_top (
   logic unused_be;
   assign unused_wdata = ^reg_wdata;
   assign unused_be = ^reg_be;
+{%- if udps.bus_interface_cfg.racl_support %}
+  logic unused_policy_sel;
+  assign unused_policy_sel = ^racl_policies_i;
+{%- endif %}
 
   // Assertions for Register Interface
   `ASSERT_PULSE(wePulse, reg_we, clk_i, !rst_ni)

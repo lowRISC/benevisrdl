@@ -59,7 +59,8 @@ def _export(ip_block: dict, out_dir: Path) -> None:
     reg_top_tpl = env.get_template("reg_top.sv.tpl")
     for interface in ip_block["interfaces"]:
         name = "_{}".format(interface["name"].lower()) if "name" in interface else ""
-        data_ = {"name": ip_name, "interface": interface}
+        data_ = {"name": ip_name, "interface": interface, "udps": ip_block.get("udps", {})}
+        data_["udps"].update(interface.get("udps"))
         stream = reg_top_tpl.render(data_).replace(" \n", "\n")
         path = out_dir / f"{ip_name}{name}_reg_top.sv"
         path.open("w").write(stream)
