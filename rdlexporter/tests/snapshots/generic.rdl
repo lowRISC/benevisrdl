@@ -40,8 +40,8 @@ addrmap root #(
                 hw = rw;
             } MODE[9:2];
         } CTRL[4] @ 0x4;
-        CTRL.MODE -> swwe = CTRL_WEN.EN;
 
+        CTRL.MODE -> swwe = CTRL_WEN.EN;
     } GENERIC;
 
 };
