@@ -246,8 +246,8 @@ class RdlExporter:
                 self._emit_signal(child)
             else:
                 self._raise_type_error(type(child))
-            self._emit_dynamic_assignment()
             self.stream += "\n"
+        self._emit_dynamic_assignment()
 
         self.indent_pos -= self.indent_width
         self.stream += self._indent() + "}"
