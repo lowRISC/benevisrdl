@@ -68,7 +68,7 @@ def needs_int_qe(reg: dict) -> bool:
     An internal q-enable means the net may be consumed by other reg logic but will
     not be exposed in the package file.
     """
-    return (bool(reg["async_clk"]) and reg["hw_writable"]) or needs_qe(reg)
+    return (bool(reg.get("async_clk", False)) and reg["hw_writable"]) or needs_qe(reg)
 
 
 def get_bit_width(offset: int) -> int:
@@ -99,11 +99,11 @@ def get_sw_access_enum(field: node.FieldNode) -> str:
     return "NONE"
 
 
-def fields_no_write_en(reg: dict) -> int:
-    """Count how many fields has write enable."""
+def fields_write_en_mask(reg: dict) -> int:
+    """Return a mask of bits mapping to write enable fields."""
     res = 0
     for idx, field in enumerate(reg["fields"]):
-        res |= (not needs_we(field)) << idx
+        res |= int(not needs_we(field)) << idx
     return res
 
 
@@ -122,7 +122,7 @@ def is_homogeneous(reg: dict) -> bool:
 
     The offset are excluded from the comparison.
     """
-    exclude = ["name", "msb", "lsb", "bitmask", "type"]
+    exclude = ["name", "msb", "lsb", "bitmask", "type", "type_name"]
     unamed_fields = [
         {key: value for key, value in f.items() if key not in exclude} for f in reg["fields"]
     ]

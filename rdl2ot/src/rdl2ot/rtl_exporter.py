@@ -5,6 +5,7 @@
 """Export RDL to opentitan RTL."""
 
 import json
+import re
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
@@ -22,6 +23,9 @@ def _camelcase(value: str) -> str:
     words = value.split("_")
     return "".join(word.capitalize() for word in words)
 
+
+def _reindex(s: str, new_index: int) -> str:
+    return re.sub(r"\d+", str(new_index), s)
 
 def run(root_node: node.AddrmapNode, out_dir: Path, is_soc: bool = False) -> None:
     """Export RDL to opentitan RTL.
@@ -48,6 +52,7 @@ def _export(ip_block: dict, out_dir: Path) -> None:
     file_loader = FileSystemLoader(TEMPLATES_DIR)
     env = Environment(loader=file_loader)
     env.filters["camelcase"] = _camelcase
+    env.filters["reindex"] = _reindex
 
     ip_name = ip_block["name"].lower()
     reg_pkg_tpl = env.get_template("reg_pkg.sv.tpl")
@@ -60,7 +65,7 @@ def _export(ip_block: dict, out_dir: Path) -> None:
     for interface in ip_block["interfaces"]:
         name = "_{}".format(interface["name"].lower()) if "name" in interface else ""
         data_ = {"name": ip_name, "interface": interface, "udps": ip_block.get("udps", {})}
-        data_["udps"].update(interface.get("udps"))
+        data_["udps"].update(interface.get("udps", {}))
         stream = reg_top_tpl.render(data_).replace(" \n", "\n")
         path = out_dir / f"{ip_name}{name}_reg_top.sv"
         path.open("w").write(stream)
@@ -76,6 +81,8 @@ class OtInterfaceBuilder:
     all_async_clk: bool = True  # Whether all registers have async clock in the interface
     async_registers: list = [(int, str)]  # List of all the (index, register) with async clock
     any_shadowed_reg: bool = False
+    any_hw_writable_reg: bool = False
+    any_sw_writable_reg: bool = False
     reg_index: int = 0
 
     def get_signal(self, sig: node.SignalNode) -> dict:
@@ -166,11 +173,12 @@ class OtInterfaceBuilder:
         obj["external"] = reg.external
         obj["shadowed"] = reg.get_property("shadowed", default=False)
         obj["hwre"] = reg.get_property("hwre", default=False)
+        obj["compacted"] = reg.get_property("compacted", default=False)
 
         obj["offsets"] = self.parse_array(reg)
         array_size = len(obj["offsets"])
         self.num_regs += array_size
-        obj["is_multireg"] = array_size > 1
+        obj["is_multireg"] = reg.is_array
 
         sw_write_en = False
         msb = 0
@@ -197,13 +205,16 @@ class OtInterfaceBuilder:
             "needs_read_en": opentitan.needs_read_en(obj),
             "needs_qe": opentitan.needs_qe(obj),
             "needs_int_qe": opentitan.needs_int_qe(obj),
-            "fields_no_write_en": opentitan.fields_no_write_en(obj),
+            "fields_write_en_mask": opentitan.fields_write_en_mask(obj),
+            "fields_write_en_bits": opentitan.fields_write_en_mask(obj).bit_count(),
             "is_homogeneous": opentitan.is_homogeneous(obj),
         }
 
         self.any_async_clk |= bool(obj.get("async_clk", False))
         self.all_async_clk &= bool(obj.get("async_clk", False))
         self.any_shadowed_reg |= bool(obj["shadowed"])
+        self.any_hw_writable_reg |= bool(obj["hw_writable"])
+        self.any_sw_writable_reg |= bool(obj["sw_writable"])
 
         if bool(obj.get("async_clk", False)):
             for index in range(array_size):
@@ -271,6 +282,8 @@ class OtInterfaceBuilder:
         self.any_async_clk = False
         self.all_async_clk = True
         self.any_shadowed_reg = False
+        self.any_hw_writable_reg = False
+        self.any_sw_writable_reg = False
         self.async_registers.clear()
 
         interface = {}
@@ -318,6 +331,8 @@ class OtInterfaceBuilder:
         interface["any_async_clk"] = self.any_async_clk
         interface["all_async_clk"] = self.all_async_clk
         interface["any_shadowed_reg"] = self.any_shadowed_reg
+        interface["any_hw_writable_reg"] = self.any_hw_writable_reg
+        interface["any_sw_writable_reg"] = self.any_sw_writable_reg
         interface["any_integrity_bypass"] = any(
             win["integrity_bypass"] for win in interface["windows"]
         )
