@@ -37,7 +37,6 @@
     pkgs = import nixpkgs {
       inherit system;
     };
-    peakrdl = lowrisc-nix.packages.${system}.peakrdl;
 
     workspace = uv2nix.lib.workspace.loadWorkspace {workspaceRoot = ./.;};
     overlay = workspace.mkPyprojectOverlay {
@@ -61,7 +60,6 @@
   in {
     devShells.x86_64-linux.default = pkgs.mkShell {
       packages = [env pkgs.uv pkgs.reuse];
-      buildInputs = [peakrdl];
     };
     formatter.x86_64-linux = nixpkgs.legacyPackages.x86_64-linux.alejandra;
   };

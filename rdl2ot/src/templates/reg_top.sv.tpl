@@ -10,17 +10,19 @@
 {%- set has_windows = windows|length > 0 %}
 {%- set has_regs = registers|length > 0 %}
 {%- set interface_name = ("_" + interface.name|lower) if interface.name %}
-{%- set num_regs_digits = interface.num_regs | string | length %}
+{%- set num_regs_digits = (interface.num_regs - 1) | string | length %}
 {%- set clk_name = "aon_" %}
+{%- set racl_support = (udps.bus_interface_cfg and udps.bus_interface_cfg.racl_support) %}
 
-module {{ name|lower }}{{interface_name}}_reg_top {{"(" if not udps.bus_interface_cfg.racl_support }}
-{%- if udps.bus_interface_cfg.racl_support %}
+module {{ name|lower }}{{interface_name}}_reg_top {{"(" if not racl_support }}
+{%- if racl_support %}
+  {%- set if_name = interface.name|camelcase if interface.name %}
   # (
     parameter bit          EnableRacl           = 1'b0,
-    parameter bit          RaclErrorRsp         = 1'b1{{"," if udps.bus_interface_cfg.racl_support }}
-  {%- if udps.bus_interface_cfg.racl_support %}
-    parameter top_racl_pkg::racl_policy_sel_t RaclPolicySelVec[{{ "{}_reg_pkg::NumRegs{}".format(name|lower, interface.name|camelcase) }}] =
-      {{ "'{{{}_reg_pkg::NumRegs{}{{0}}}}".format(name|lower, interface.name|camelcase) }}
+    parameter bit          RaclErrorRsp         = 1'b1{{"," if racl_support }}
+  {%- if racl_support %}
+    parameter top_racl_pkg::racl_policy_sel_t RaclPolicySelVec[{{ "{}_reg_pkg::NumRegs{}".format(name|lower, if_name) }}] =
+      {{ "'{{{}_reg_pkg::NumRegs{}{{0}}}}".format(name|lower, if_name) }}
   {%- endif %}
   ) (
 {%- endif %}
@@ -45,10 +47,13 @@ module {{ name|lower }}{{interface_name}}_reg_top {{"(" if not udps.bus_interfac
 {%- endif %}
 
 {%- if has_regs %}
-
   // To HW
+  {%- if interface.any_sw_writable_reg %}
   output {{ name|lower }}_reg_pkg::{{ name|lower }}{{interface_name}}_reg2hw_t reg2hw, // Write
+  {%- endif %}
+  {%- if interface.any_hw_writable_reg %}
   input  {{ name|lower }}_reg_pkg::{{ name|lower }}{{interface_name}}_hw2reg_t hw2reg, // Read
+  {%- endif %}
 {%- endif %}
 
 {%- if interface.any_shadowed_reg %}
@@ -58,7 +63,7 @@ module {{ name|lower }}{{interface_name}}_reg_top {{"(" if not udps.bus_interfac
 
 {%- endif %}
 
-{%- if udps.bus_interface_cfg.racl_support %}
+{%- if racl_support %}
 
   // RACL interface
   input  top_racl_pkg::racl_policy_vec_t racl_policies_i,
@@ -279,10 +284,10 @@ module {{ name|lower }}{{interface_name}}_reg_top {{"(" if not udps.bus_interfac
     .be_o    (reg_be),
     .busy_i  (reg_busy),
     .rdata_i (reg_rdata),
-  {%- if udps.bus_interface_cfg.racl_support %}
+  {%- if racl_support %}
     // Translate RACL error to TLUL error if enabled
   {%- endif %}
-    .error_i (reg_error{{" | (RaclErrorRsp & racl_error_o.valid)" if udps.bus_interface_cfg.racl_support }})
+    .error_i (reg_error{{" | (RaclErrorRsp & racl_error_o.valid)" if racl_support }})
   );
 
   // cdc oversampling signals
@@ -295,17 +300,20 @@ module {{ name|lower }}{{interface_name}}_reg_top {{"(" if not udps.bus_interfac
   //        or <reg>_{wd|we|qs} if field == 1 or 0
 {%- endif %}
 {%- for reg in registers  %}
+  {%- set reindex = namespace(num=0) -%}
   {%- for offset in reg.offsets %}
     {%- set multireg_idx = loop.index0 %}
     {%- set reg_suffix = ('_' ~ multireg_idx|string) if reg.offsets|length > 1 %}
     {%- if reg.opentitan.needs_read_en %}
-  logic {{ reg.name|lower }}{{ reg_suffix }}_re;
+  logic {{ reg.name|lower ~ reg_suffix }}_re;
     {%- endif %}
     {%- if reg.opentitan.needs_write_en %}
-  logic {{ reg.name|lower }}{{ reg_suffix }}_we;
+  logic {{ reg.name|lower ~ reg_suffix }}_we;
     {%- endif %}
     {%- for field in reg.fields %}
-      {%- set field_name = ('_' ~ field.name|lower ~ reg_suffix) if reg.is_multifields %}
+      {%- set _field_name = ('_' ~ field.name|lower ~ reg_suffix) if reg.is_multifields %}
+      {%- set field_name = (('_' ~ field.name|lower) | reindex(reindex.num)) if reg.is_multifields and reg.compacted else _field_name %}
+      {%- set reindex.num = reindex.num + 1 %}
       {%- set width = "[{}:0] ".format(field.width - 1) if field.width > 1 %}
       {%- if not reg.async_clk and field.sw_readable %} 
   logic {{ width ~ reg.name|lower ~ reg_suffix ~ field_name }}_qs;
@@ -326,7 +334,6 @@ module {{ name|lower }}{{interface_name}}_reg_top {{"(" if not udps.bus_interfac
 {%- endfor %}
 
 {%- if interface.any_async_clk %}
-
   // Define register CDC handling.
   // CDC handling is done on a per-reg instead of per-field boundary.
 {{ space }}  
@@ -433,18 +440,21 @@ module {{ name|lower }}{{interface_name}}_reg_top {{"(" if not udps.bus_interfac
 {%- endif %}
 
 {%- if has_regs %}
-{{ space }}
   // Register instances
 {%- endif %}
 
 {%- set assign = namespace(expr="") %}
 {%- for reg in registers  %}
 {{- space }}
+  {%- set reindex = namespace(num=0) -%}
   {%- for offset in reg.offsets %}
     {%- set multireg_idx = loop.index0 if reg.is_multireg %}
     {%- set multireg_suffix = "_{}".format(multireg_idx) if reg.offsets|length > 1 %}
     {%- set regname = reg.name|lower ~ multireg_suffix %}
     {%- set clk_prefix = clk_name if reg.async_clk %}
+    {%- set num_flds_wr_en = reg.opentitan.fields_write_en_bits %}
+    {%- set flds_wr_en_mask = reg.opentitan.fields_write_en_mask %}
+    {%- set num_flds = reg.fields|length %}
     {%- if reg.is_multireg %}
   // Subregister {{multireg_idx}} of Multireg {{ reg.name|lower }}
     {%- endif %}
@@ -458,22 +468,26 @@ module {{ name|lower }}{{interface_name}}_reg_top {{"(" if not udps.bus_interfac
     {%- endif %}
     {%- if reg.opentitan.needs_qe  %}
       {%- if reg.external %}
-        {%- if reg.opentitan.fields_no_write_en > 0 %}
+        {%- if num_flds_wr_en < num_flds and num_flds_wr_en > 0 %}
   // This ignores QEs that are set to constant 0 due to read-only fields.
   logic unused_{{ reg.name|lower }}_flds_we;
-  assign unused_{{ reg.name|lower }}_flds_we = {{ "^({}_flds_we & {}'h{:x})".format(reg.name|lower, reg.fields|length, reg.opentitan.fields_no_write_en ) }};
+  assign unused_{{ reg.name|lower }}_flds_we = {{ "^({}_flds_we & {}'h{:x})".format(reg.name|lower, num_flds, flds_wr_en_mask ) }};
+      {%- endif %}
+      {%- if reg.external and num_flds_wr_en == num_flds %}
+  // In case all fields are read-only the aggregated register QE will be zero as well.
       {%- endif %}
       {%- set right_expr = "{}_flds_we".format(regname) %}
-      {%- set right_expr = right_expr ~ (" | {}'h{:x}".format(reg.fields|length, reg.opentitan.fields_no_write_en ) if reg.opentitan.fields_no_write_en > 0) %}
-  assign {{regname }}_qe = &{{ "({})".format(right_expr) if reg.opentitan.fields_no_write_en > 0 else "{}".format(right_expr) }};
+      {%- set right_expr = "({} | {}'h{:x})".format(right_expr, num_flds, flds_wr_en_mask ) if reg.external and num_flds_wr_en < num_flds and num_flds_wr_en > 0 else right_expr %}
+  assign {{regname }}_qe = &{{ "{}".format(right_expr) if num_flds_wr_en > 0 else "{}".format(right_expr) }};
       {%- else %}
   prim_flop #(
     .Width(1),
     .ResetValue(0)
   ) u_{{ reg.name|lower ~ loop.index0}}_qe (
-    .clk_i(clk_i),
-    .rst_ni(rst_ni),
-    .d_i(&({{ regname }}_flds_we {{"| {}'h{:x}".format(reg.fields|length, reg.opentitan.fields_no_write_en) if reg.opentitan.fields_no_write_en }})),
+    .clk_i({{reg.async_clk|lower if reg.async_clk else "clk_i"}}),
+    .rst_ni({{reg.async_rst|lower if reg.async_rst else "rst_ni"}}),
+      {%- set right_expr = " | {}'h{:x})".format(num_flds, num_flds_wr_en) if num_flds_wr_en %}
+    .d_i({{"&{}{}_flds_we{}".format("(" if num_flds_wr_en, regname, right_expr) }}),
     .q_o({{ regname }}_qe)
   );
       {%- endif %}
@@ -494,14 +508,16 @@ module {{ name|lower }}{{interface_name}}_reg_top {{"(" if not udps.bus_interfac
           {%- set assign.expr = "prim_mubi_pkg::mubi{}_test_true_strict(prim_mubi_pkg::mubi{}_t'({}_qs))".format(width, width, wr_en_sig_name)|lower %}
         {%- endif %}
       {%- endif %}
-  assign {{ clk_prefix ~ regname }}_gated_we = {{ clk_prefix ~ regname }}_we & {{ assign.expr }};
+      {%- set assignment =  "  assign {}{}_gated_we = {}{}_we & {};".format(clk_prefix, regname, clk_prefix, regname, assign.expr) %}
+{{assignment if assignment|length < 100 else assignment|replace("= ", "=\n    ")}}
     {%- endif %}
     {%- for field in reg.fields  %}
-      {%- set field_name = "_{}{}".format(field.name, multireg_suffix)|lower if reg.is_multifields %}
+      {%- set _field_name = "_{}{}{}".format(field.name, multireg_suffix, reg_suffix)|lower if reg.is_multifields and not reg.compacted %}
+      {%- set field_name = (("_" ~ field.name) | reindex(reindex.num) | lower) if reg.is_multifields and reg.compacted else _field_name %}
       {%- set property = ".{}".format(field.name)|lower if reg.is_multifields and not reg.opentitan.is_homogeneous %}
       {%- set bit_index = "[{}:{}]".format(field.msb, field.lsb) if field.msb != field.lsb else "[{}]".format(field.msb) %}
       {%- if reg.is_multifields %}
-  //   F{{ '[{}{}]: {}:{}'.format(field.name, multireg_suffix, field.msb, field.lsb)|lower }}
+  //   F{{ '[{}]: {}:{}'.format(field_name|trim("_"), field.msb, field.lsb)|lower }}
       {%- endif %}
   prim_subreg{{ '_ext' if reg.external else ('_shadow' if reg.shadowed) }} #(
       {%- set align_width = 4 if reg.external else 6 %}
@@ -512,33 +528,51 @@ module {{ name|lower }}{{interface_name}}_reg_top {{"(" if not udps.bus_interfac
     .RESVAL  ({{ "{}'h{:x}".format(field.width, (field.reset if field.reset else 0)) }}),
     .Mubi    (1'b{{ ("MultiBitBool" in field.encode)|int }})
       {%- endif %}
-  ) u_{{ regname ~ field_name }} (
+  ) u_{{ regname ~ field_name}} (
       {%- if not reg.external %}
     .clk_i   (clk_{{ clk_prefix if reg.async_clk }}i),
     .rst_ni  (rst_{{ clk_prefix if reg.async_clk }}ni),
-      {%- if reg.shadowed %}
+        {%- if reg.shadowed %}
     .rst_shadowed_ni (rst_shadowed_ni),
-      {%- endif %}
+        {%- endif %}
       {%- endif %}
 {{- space }}
-    {%- set idx = loop.index0 if reg.opentitan.is_homogeneous and reg.is_multifields else multireg_idx %}
-    {%- set sig_name = (reg.name ~ ("[{}]".format(idx) if reg.is_multireg) ~ property)|lower -%}
-    {%- set suffix = "_int" if reg.async_clk %}
+      {%- set _idx = loop.index0 if reg.opentitan.is_homogeneous and reg.is_multifields else multireg_idx %}
+      {%- set idx = reindex.num if reg.compacted else _idx %}
+      {%- set reindex.num = reindex.num + 1 %}
+      {%- set sig_name = (reg.name ~ ("[{}]".format(idx) if reg.is_multireg or (reg.opentitan.is_homogeneous and reg.is_multifields)) ~ property)|lower -%}
+      {%- set suffix = "_int" if reg.async_clk %}
+      {%- if not reg.external %}
+
+    // from register interface
+      {%- endif %}
       {%- if reg.external or reg.shadowed %}
     .re     ({{ "{}{}{}_re".format(clk_prefix, reg.name, multireg_suffix)|lower if field.sw_readable or reg.shadowed else "1'b0" }}),
       {%- endif %}
     .we     ({{ "{}{}_{}".format(clk_prefix ~ regname, ("_gated" if field.sw_write_en), "re" if field.clear_onread  else "we") if field.sw_writable else "1'b0"  }}),
     .wd     ({{ "{}{}{}_wd{}{}".format(clk_prefix, regname, field_name if not reg.async_clk, "ata" if reg.async_clk, bit_index if reg.async_clk) if field.sw_writable else "'0"  }}),
       {%- if not reg.external %}
+
+    // from internal hardware
+      {%- endif %}
+      {%- if not reg.external %}
     .de     ({{ "hw2reg.{}.de".format(sig_name ) if field.hw_writable else "1'b0" }}),
       {%- endif %}
     .d      ({{ "hw2reg.{}.d".format(sig_name ) if field.hw_writable else "'0" }}),
+      {%- if not reg.external %}
+
+    // to internal hardware
+      {%- endif %}
       {%- if reg.external %}
     .qre    ({{  "reg2hw.{}.re".format(sig_name) if reg.hwre or reg.shadowed }}),
       {%- endif %}
     .qe     ({{ "{}_flds_we[{}]".format(regname, loop.index0) if reg.opentitan.needs_int_qe  }}),
     .q      ({{ "reg2hw.{}.q".format(sig_name) if field.hw_readable }}),
     .ds     ({{ "{}{}{}_ds{}".format(clk_prefix, regname, field_name, suffix) if reg.async_clk and reg.hw_writable }}),
+      {%- if not reg.external %}
+
+    // to register interface (read)
+      {%- endif %}
     .qs     ({{ "{}{}_qs{}".format(clk_prefix, regname ~ field_name, suffix) if field.sw_readable }})
       {%- if not reg.external and reg.shadowed -%}
       ,
@@ -569,7 +603,7 @@ module {{ name|lower }}{{interface_name}}_reg_top {{"(" if not udps.bus_interfac
 {%- if has_regs %}
 
   logic [{{interface.num_regs - 1 }}:0] addr_hit;
-  {%- if udps.bus_interface_cfg.racl_support %}
+  {%- if racl_support %}
   top_racl_pkg::racl_role_vec_t racl_role_vec;
   top_racl_pkg::racl_role_t racl_role;
 
@@ -592,15 +626,14 @@ module {{ name|lower }}{{interface_name}}_reg_top {{"(" if not udps.bus_interfac
     // leaving others unread. Intentionally read them to avoid linting errors.
     logic unused_role_vec;
     assign unused_role_vec = ^racl_role_vec;
-  {%- endif %}
+    {%- endif %}
   end else begin : gen_no_racl_role_logic
     assign racl_role     = '0;
     assign racl_role_vec = '0;
   end
   {%- endif %}
-
   always_comb begin
-  {%- if udps.bus_interface_cfg.racl_support %}
+  {%- if racl_support %}
     racl_addr_hit_read  = '0;
     racl_addr_hit_write = '0;
   {%- endif %}
@@ -612,7 +645,7 @@ module {{ name|lower }}{{interface_name}}_reg_top {{"(" if not udps.bus_interfac
     addr_hit[{{ index }}] = (reg_addr == {{ (name ~ '_' ~ reg.name)|upper }}{% if reg.offsets|length > 1 %}_{{ loop.index0 }}{% endif %}_OFFSET);
     {%- endfor %}
   {%- endfor %}
-  {%- if udps.bus_interface_cfg.racl_support %}
+  {%- if racl_support %}
 
     if (EnableRacl) begin : gen_racl_hit
       for (int unsigned slice_idx = 0; slice_idx < {{interface.num_regs}}; slice_idx++) begin
@@ -640,7 +673,7 @@ module {{ name|lower }}{{interface_name}}_reg_top {{"(" if not udps.bus_interfac
 
   assign addrmiss = (reg_re || reg_we) ? ~|addr_hit : 1'b0 ;
 
-  {%- if udps.bus_interface_cfg.racl_support %}
+  {%- if racl_support %}
   // A valid address hit, access, but failed the RACL check
   assign racl_error_o.valid = |addr_hit & ((reg_re & ~|racl_addr_hit_read) |
                                            (reg_we & ~|racl_addr_hit_write));
@@ -662,8 +695,8 @@ module {{ name|lower }}{{interface_name}}_reg_top {{"(" if not udps.bus_interfac
     wr_err = (reg_we &
   {%- set ns = namespace(counter=0) %}
   {%- set interface_name = ("_" + interface.name|lower) if interface.name -%}
-  {%- set wr_addr_hit = "racl_addr_hit_write" if udps.bus_interface_cfg.racl_support else "addr_hit" %}
-  {%- set rd_addr_hit = "racl_addr_hit_read" if udps.bus_interface_cfg.racl_support else "addr_hit" %}
+  {%- set wr_addr_hit = "racl_addr_hit_write" if racl_support else "addr_hit" %}
+  {%- set rd_addr_hit = "racl_addr_hit_read" if racl_support else "addr_hit" %}
   {%- for reg in registers %}
     {%- set outer_loop = loop -%}
     {%- for offset in reg.offsets %}
@@ -679,6 +712,7 @@ module {{ name|lower }}{{interface_name}}_reg_top {{"(" if not udps.bus_interfac
   // Generate write-enables
   {%- set ns = namespace(re_index=0) -%}
   {%- for reg in registers  %}
+    {%- set reindex = namespace(num=0) -%}
     {%- for offset in reg.offsets %}
       {%- set reg_suffix = ('_' ~ loop.index0|string) if reg.offsets|length > 1 %}
       {%- set regname = "{}{}".format(reg.name, reg_suffix)|lower %}
@@ -687,20 +721,24 @@ module {{ name|lower }}{{interface_name}}_reg_top {{"(" if not udps.bus_interfac
       {%- endif %}
       {%- if reg.opentitan.needs_write_en %}
   assign {{ regname }}_we = {{wr_addr_hit}}[{{ ns.re_index }}] & reg_we & !reg_error;
+{{space}}
       {%- endif %}
       {%- set ns.re_index = ns.re_index + 1 %}
       {%- for field in reg.fields %}
         {%- if field.sw_writable and not reg.async_clk %}
-          {%- set field_name = ('_' ~ field.name|lower ~ reg_suffix) if reg.is_multifields %}
+          {%- set _field_name = ('_' ~ field.name|lower  ~ reg_suffix) if reg.is_multifields %}
+          {%- set field_name = (('_' ~ field.name|lower) | reindex(reindex.num)) if reg.is_multifields and reg.compacted else _field_name%}
+          {%- set reindex.num = reindex.num + 1 %}
           {%- set left_expr = "{}{}{}".format(reg.name, reg_suffix, field_name)|lower %}
           {%- set bit_index = "{}:{}".format(field.msb, field.lsb) if field.width > 1 else field.msb %}
           {%- set right_expr = "'1" if field.clear_onread else "reg_wdata[{}]".format(bit_index) %}
   assign {{ left_expr }}_wd = {{ right_expr }};
+{{space}}
         {%- endif %}
       {%- endfor %}
     {%- endfor %}
-  {% endfor %}
-
+  {%- endfor %}
+{{space}}
   // Assign write-enables to checker logic vector.
   always_comb begin
   {%- set ns = namespace(counter=0) %}
@@ -720,22 +758,27 @@ module {{ name|lower }}{{interface_name}}_reg_top {{"(" if not udps.bus_interfac
     unique case (1'b1)
   {%- set ns = namespace(counter=0) %}
   {%- for reg in registers %}
+    {%- set reindex = namespace(num=0) -%}
     {%- for offset in reg.offsets %}
-      {%- set reg_suffix = ('_' ~ loop.index0|string) if reg.offsets|length > 1 and not (reg.opentitan.is_homogeneous and reg.is_multifields)  %}
+      {%- set reg_suffix = ('_' ~ loop.index0|string) if reg.offsets|length > 1  %}
       {{rd_addr_hit}}[{{ ns.counter }}]: begin
       {%- set ns.counter = ns.counter + 1 %}
       {%- if reg.async_clk %}
         reg_rdata_next = DW'({{ "{}{}_qs".format(reg.name, reg_suffix)|lower }});
       {%- else %}
         {%- for field in reg.fields %}
-            {%- set field_name = ('_' ~ field.name|lower ~ reg_suffix) if reg.is_multifields %}
+            {%- set _field_name = ('_' ~ field.name|lower ~ reg_suffix) if reg.is_multifields %}
+            {%- set field_name = (('_' ~ field.name) | reindex(reindex.num)) if reg.is_multifields and reg.compacted else _field_name %}
+            {%- set reindex.num = reindex.num + 1 %}
             {%- set index = "{}:{}".format(field.msb, field.lsb) if field.width > 1 else field.msb %}
             {%- set expr = "{}{}{}_qs".format(reg.name, reg_suffix, field_name)|lower if field.sw_readable else "'0" %}
         reg_rdata_next{{ "[{}] = {}".format(index, expr)|lower }};
         {%- endfor %}
       {%- endif %}
       end
+      {%- if not reg.async_clk %}
 {{ space }}
+      {%- endif %}
     {%- endfor -%}
   {%- endfor %}
       default: begin
@@ -835,7 +878,7 @@ module {{ name|lower }}{{interface_name}}_reg_top {{"(" if not udps.bus_interfac
   logic unused_be;
   assign unused_wdata = ^reg_wdata;
   assign unused_be = ^reg_be;
-{%- if udps.bus_interface_cfg.racl_support %}
+{%- if racl_support %}
   logic unused_policy_sel;
   assign unused_policy_sel = ^racl_policies_i;
 {%- endif %}
