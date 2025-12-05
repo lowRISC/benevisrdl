@@ -142,6 +142,7 @@ class SigType(Enum):
     InOut = "InOut"
     Input = "Input"
     Output = "Output"
+    Sync = "Sync"
 
     def is_pad(self) -> bool:
         """Check whether a signal is a pad."""
@@ -158,3 +159,7 @@ class SigType(Enum):
     def is_inter_module(self) -> bool:
         """Check whether a signal is a inter module."""
         return self in [SigType.InterModReqRsp, SigType.InterModReq, SigType.InterModRecv]
+
+    def is_sync(self) -> bool:
+        """Check whether a signal is used for synchronization."""
+        return self in [SigType.Sync]

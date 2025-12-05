@@ -159,7 +159,10 @@ class OtInterfaceBuilder:
         obj["sw_readable"] = reg.has_sw_readable
         obj["sw_writable"] = reg.has_sw_writable
         obj["swmod"] = reg.get_property("swmod", default=None)
-        obj["async_clk"] = reg.get_property("async_clk", default=None)
+        if async_clk := reg.get_property("async_clk", default=None):
+            obj["async_clk"] = async_clk.inst_name
+        if async_rst := reg.get_property("async_rst", default=None):
+            obj["async_rst"] = async_rst.inst_name
         obj["external"] = reg.external
         obj["shadowed"] = reg.get_property("shadowed", default=False)
         obj["hwre"] = reg.get_property("hwre", default=False)
@@ -198,11 +201,11 @@ class OtInterfaceBuilder:
             "is_homogeneous": opentitan.is_homogeneous(obj),
         }
 
-        self.any_async_clk |= bool(obj["async_clk"])
-        self.all_async_clk &= bool(obj["async_clk"])
+        self.any_async_clk |= bool(obj.get("async_clk", False))
+        self.all_async_clk &= bool(obj.get("async_clk", False))
         self.any_shadowed_reg |= bool(obj["shadowed"])
 
-        if bool(obj["async_clk"]):
+        if bool(obj.get("async_clk", False)):
             for index in range(array_size):
                 reg_name = reg.inst_name + (f"_{index}" if array_size > 1 else "")
                 self.async_registers.append((self.reg_index + index, reg_name))
@@ -222,6 +225,8 @@ class OtInterfaceBuilder:
             interface["alerts"].append(signal["name"])
         elif opentitan.SigType(signal["sigtype"]).is_inter_module():
             interface["inter_modules"].append(signal)
+        elif opentitan.SigType(signal["sigtype"]).is_sync():
+            interface["sync_signals"].append(signal)
         else:
             print(f"WARNING: Unsupported signal type: {signal}.")
 
@@ -336,6 +341,7 @@ class OtInterfaceBuilder:
         obj["interrupts"] = []
         obj["signals"] = []
         obj["inter_modules"] = []
+        obj["sync_signals"] = []
         for child in ip_block.children():
             if isinstance(child, node.AddrmapNode):
                 child_obj = self.get_interface(child, DEFAULT_INTERFACE_NAME)
