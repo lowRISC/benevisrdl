@@ -225,7 +225,6 @@ module lc_ctrl_regs_reg_top (
   logic [31:0] manuf_state_6_qs;
   logic manuf_state_7_re;
   logic [31:0] manuf_state_7_qs;
-
   // Register instances
   // R[alert_test]: V(True)
   logic alert_test_qe;
@@ -464,20 +463,28 @@ module lc_ctrl_regs_reg_top (
 
   // R[claim_transition_if_regwen]: V(False)
   prim_subreg #(
-    .DW    (1),
+    .DW      (1),
     .SwAccess(prim_subreg_pkg::SwAccessW0C),
     .RESVAL  (1'h1),
     .Mubi    (1'b0)
   ) u_claim_transition_if_regwen (
     .clk_i   (clk_i),
     .rst_ni  (rst_ni),
+
+    // from register interface
     .we     (claim_transition_if_regwen_we),
     .wd     (claim_transition_if_regwen_wd),
+
+    // from internal hardware
     .de     (1'b0),
     .d      ('0),
+
+    // to internal hardware
     .qe     (),
     .q      (),
     .ds     (),
+
+    // to register interface (read)
     .qs     (claim_transition_if_regwen_qs)
   );
 
@@ -1210,62 +1217,71 @@ module lc_ctrl_regs_reg_top (
 
   // Generate write-enables
   assign alert_test_we = addr_hit[0] & reg_we & !reg_error;
+
   assign alert_test_fatal_prog_error_wd = reg_wdata[0];
+
   assign alert_test_fatal_state_error_wd = reg_wdata[1];
+
   assign alert_test_fatal_bus_integ_error_wd = reg_wdata[2];
- 
+
   assign status_re = addr_hit[1] & reg_re & !reg_error;
- 
   assign claim_transition_if_regwen_we = addr_hit[2] & reg_we & !reg_error;
+
   assign claim_transition_if_regwen_wd = reg_wdata[0];
- 
+
   assign claim_transition_if_re = addr_hit[3] & reg_re & !reg_error;
   assign claim_transition_if_we = addr_hit[3] & reg_we & !reg_error;
+
   assign claim_transition_if_wd = reg_wdata[7:0];
- 
+
   assign transition_regwen_re = addr_hit[4] & reg_re & !reg_error;
- 
   assign transition_cmd_we = addr_hit[5] & reg_we & !reg_error;
+
   assign transition_cmd_wd = reg_wdata[0];
- 
+
   assign transition_ctrl_re = addr_hit[6] & reg_re & !reg_error;
   assign transition_ctrl_we = addr_hit[6] & reg_we & !reg_error;
+
   assign transition_ctrl_ext_clock_en_wd = reg_wdata[0];
+
   assign transition_ctrl_volatile_raw_unlock_wd = reg_wdata[1];
- 
+
   assign transition_token_0_re = addr_hit[7] & reg_re & !reg_error;
   assign transition_token_0_we = addr_hit[7] & reg_we & !reg_error;
+
   assign transition_token_0_wd = reg_wdata[31:0];
+
   assign transition_token_1_re = addr_hit[8] & reg_re & !reg_error;
   assign transition_token_1_we = addr_hit[8] & reg_we & !reg_error;
+
   assign transition_token_1_wd = reg_wdata[31:0];
+
   assign transition_token_2_re = addr_hit[9] & reg_re & !reg_error;
   assign transition_token_2_we = addr_hit[9] & reg_we & !reg_error;
+
   assign transition_token_2_wd = reg_wdata[31:0];
+
   assign transition_token_3_re = addr_hit[10] & reg_re & !reg_error;
   assign transition_token_3_we = addr_hit[10] & reg_we & !reg_error;
+
   assign transition_token_3_wd = reg_wdata[31:0];
- 
+
   assign transition_target_re = addr_hit[11] & reg_re & !reg_error;
   assign transition_target_we = addr_hit[11] & reg_we & !reg_error;
+
   assign transition_target_wd = reg_wdata[29:0];
- 
+
   assign otp_vendor_test_ctrl_re = addr_hit[12] & reg_re & !reg_error;
   assign otp_vendor_test_ctrl_we = addr_hit[12] & reg_we & !reg_error;
+
   assign otp_vendor_test_ctrl_wd = reg_wdata[31:0];
- 
+
   assign otp_vendor_test_status_re = addr_hit[13] & reg_re & !reg_error;
- 
   assign lc_state_re = addr_hit[14] & reg_re & !reg_error;
- 
   assign lc_transition_cnt_re = addr_hit[15] & reg_re & !reg_error;
- 
   assign lc_id_state_re = addr_hit[16] & reg_re & !reg_error;
- 
   assign hw_revision0_re = addr_hit[17] & reg_re & !reg_error;
- 
   assign hw_revision1_re = addr_hit[18] & reg_re & !reg_error;
- 
   assign device_id_0_re = addr_hit[19] & reg_re & !reg_error;
   assign device_id_1_re = addr_hit[20] & reg_re & !reg_error;
   assign device_id_2_re = addr_hit[21] & reg_re & !reg_error;
@@ -1274,7 +1290,6 @@ module lc_ctrl_regs_reg_top (
   assign device_id_5_re = addr_hit[24] & reg_re & !reg_error;
   assign device_id_6_re = addr_hit[25] & reg_re & !reg_error;
   assign device_id_7_re = addr_hit[26] & reg_re & !reg_error;
- 
   assign manuf_state_0_re = addr_hit[27] & reg_re & !reg_error;
   assign manuf_state_1_re = addr_hit[28] & reg_re & !reg_error;
   assign manuf_state_2_re = addr_hit[29] & reg_re & !reg_error;
@@ -1283,7 +1298,6 @@ module lc_ctrl_regs_reg_top (
   assign manuf_state_5_re = addr_hit[32] & reg_re & !reg_error;
   assign manuf_state_6_re = addr_hit[33] & reg_re & !reg_error;
   assign manuf_state_7_re = addr_hit[34] & reg_re & !reg_error;
- 
 
   // Assign write-enables to checker logic vector.
   always_comb begin

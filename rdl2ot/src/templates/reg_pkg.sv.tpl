@@ -112,8 +112,8 @@ package {{ name }}_reg_pkg;
         {%- set printed.header = true %}
       {%- endif %}
       {%- set width = reg.fields|length * reg.offsets|length if reg.opentitan.is_homogeneous and reg.is_multifields else reg.offsets|length %}
-      {%- set bits = " [{}:0]".format(width - 1) if reg.is_multireg %}
-    {{ name }}_reg2hw_{{ reg.name|lower }}_{{"m" if reg.is_multireg}}reg_t{{ bits }} {{ reg.name|lower }};
+      {%- set bits = " [{}:0]".format(width - 1) if reg.is_multireg or (reg.opentitan.is_homogeneous and reg.is_multifields) %}
+    {{ "{}_reg2hw_{}_{}reg_t{} {};".format(name, reg.name, "m" if reg.is_multireg, bits, reg.name)|lower }}
     {%- endif %}
   {%- endfor %}
   {%- if printed.header %}
@@ -131,7 +131,7 @@ package {{ name }}_reg_pkg;
       {%- endif %}
       {%- set width = reg.fields|length if reg.opentitan.is_homogeneous and reg.is_multifields else reg.offsets|length %}
       {%- set bits = " [{}:0]".format(width - 1) if reg.is_multireg %}
-    {{ name }}_hw2reg_{{ reg.name|lower }}_{{"m" if reg.is_multireg}}reg_t{{ bits }} {{ reg.name|lower }};
+    {{ "{}_hw2reg_{}_{}reg_t{} {};".format(name, reg.name, "m" if reg.is_multireg, bits, reg.name)|lower }}
     {%- endif %}
   {%- endfor %}
   {%- if printed.header %}
