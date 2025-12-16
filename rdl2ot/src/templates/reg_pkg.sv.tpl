@@ -50,7 +50,7 @@ package {{ name }}_reg_pkg;
   ///////////////////////////////////////////////
     {%- for reg in registers -%}
       {%- if reg.hw_readable %}
-        {%- set fields = reg.fields[0:1] if reg.is_homogeneous else reg.fields  %}
+        {%- set fields = reg.fields[0:1] if reg.opentitan.is_homogeneous else reg.fields  %}
         {%- set indent = "  " if fields|length > 1 %}
 
   typedef struct packed {
@@ -78,7 +78,7 @@ package {{ name }}_reg_pkg;
   {%- if registers|length > 0 %}
     {%- for reg in registers  %}
       {%- if reg.hw_writable %}
-        {%- set fields = reg.fields[0:1] if reg.is_homogeneous else reg.fields  %}
+        {%- set fields = reg.fields[0:1] if reg.opentitan.is_homogeneous else reg.fields  %}
         {%- set indent = "  " if fields|length > 1 %}
 
   typedef struct packed {
@@ -111,7 +111,7 @@ package {{ name }}_reg_pkg;
   typedef struct packed {
         {%- set printed.header = true %}
       {%- endif %}
-      {%- set width = reg.fields|length * reg.offsets|length if reg.is_homogeneous and reg.is_multifields else reg.offsets|length %}
+      {%- set width = reg.fields|length * reg.offsets|length if reg.opentitan.is_homogeneous and reg.is_multifields else reg.offsets|length %}
       {%- set bits = " [{}:0]".format(width - 1) if reg.is_multireg %}
     {{ name }}_reg2hw_{{ reg.name|lower }}_{{"m" if reg.is_multireg}}reg_t{{ bits }} {{ reg.name|lower }};
     {%- endif %}
@@ -129,7 +129,7 @@ package {{ name }}_reg_pkg;
   typedef struct packed {
         {%- set printed.header = true %}
       {%- endif %}
-      {%- set width = reg.fields|length if reg.is_homogeneous and reg.is_multifields else reg.offsets|length %}
+      {%- set width = reg.fields|length if reg.opentitan.is_homogeneous and reg.is_multifields else reg.offsets|length %}
       {%- set bits = " [{}:0]".format(width - 1) if reg.is_multireg %}
     {{ name }}_hw2reg_{{ reg.name|lower }}_{{"m" if reg.is_multireg}}reg_t{{ bits }} {{ reg.name|lower }};
     {%- endif %}
