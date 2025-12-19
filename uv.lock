@@ -735,7 +735,7 @@ requires-dist = [
 
 [[package]]
 name = "rdlexporter"
-version = "0.3.0"
+version = "0.4.0"
 source = { editable = "rdlexporter" }
 dependencies = [
     { name = "systemrdl-compiler" },
