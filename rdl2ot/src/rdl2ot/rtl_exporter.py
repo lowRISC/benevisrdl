@@ -10,7 +10,7 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
 from systemrdl import node
-from systemrdl.rdltypes import OnReadType, UserEnum
+from systemrdl.rdltypes import BuiltinEnum, OnReadType, UserEnum
 from systemrdl.rdltypes.user_struct import UserStruct
 
 from rdl2ot import opentitan
@@ -26,6 +26,7 @@ def _camelcase(value: str) -> str:
 
 def _reindex(s: str, new_index: int) -> str:
     return re.sub(r"\d+", str(new_index), s)
+
 
 def run(root_node: node.AddrmapNode, out_dir: Path, is_soc: bool = False) -> None:
     """Export RDL to opentitan RTL.
@@ -152,6 +153,9 @@ class OtInterfaceBuilder:
         if udps := self.get_udps(mem):
             obj["udps"] = udps
 
+        if properties := self.get_native_properties(mem):
+            obj.update(properties)
+
         self.all_async_clk &= bool(mem.get_property("async_clk", default=False))
         self.num_windows += 1
         return obj
@@ -248,11 +252,11 @@ class OtInterfaceBuilder:
             for param in obj.inst.parameters
         ]
 
-    def parse_type(self, key:str, node: dict) -> dict:
+    def parse_type(self, key: str, node: dict) -> dict:
         """Parse the custom properties and return a list of dictionaries."""
         if isinstance(node, UserStruct):
             obj = {}
-            for k,v in node.members.items():
+            for k, v in node.members.items():
                 obj.update(self.parse_type(k, v))
             return {key: obj}
         if isinstance(node, list):
@@ -260,6 +264,11 @@ class OtInterfaceBuilder:
             return {key: vec}
         if isinstance(node, UserEnum):
             return {key: node.name}
+        if isinstance(node, BuiltinEnum):
+            return {key: str(node.name)}
+
+        if not isinstance(node, int | bool | str):
+            print(f"WARNING: Type {type(node)} not fully supported")
 
         return {key: node}
 
@@ -271,7 +280,19 @@ class OtInterfaceBuilder:
         res = {}
         for name in udps:
             udp = obj.get_property(name)
-            res.update(self.parse_type(name,  udp))
+            res.update(self.parse_type(name, udp))
+
+        return res
+
+    def get_native_properties(self, obj: node.Node) -> [dict]:
+        """Parse the native properties and return a list of dictionaries."""
+        properties = obj.list_properties(include_udp=False)
+        if len(properties) < 1:
+            return None
+        res = {}
+        for name in properties:
+            udp = obj.get_property(name)
+            res.update(self.parse_type(name, udp))
 
         return res
 
@@ -292,6 +313,9 @@ class OtInterfaceBuilder:
 
         if udps := self.get_udps(addrmap):
             interface["udps"] = udps
+
+        if properties := self.get_native_properties(addrmap):
+            interface.update(properties)
 
         interface["regs"] = []
         interface["windows"] = []
@@ -347,6 +371,9 @@ class OtInterfaceBuilder:
         if udps := self.get_udps(ip_block):
             obj["udps"] = udps
 
+        if properties := self.get_native_properties(ip_block):
+            obj.update(properties)
+
         obj["offsets"] = self.parse_array(ip_block)
         obj["size"] = ip_block.array_stride if ip_block.is_array else ip_block.size
 
@@ -362,7 +389,7 @@ class OtInterfaceBuilder:
                 child_obj = self.get_interface(child, DEFAULT_INTERFACE_NAME)
                 obj["interfaces"].append(child_obj)
             elif isinstance(child, node.SignalNode):
-                    self.parse_signal(obj, child)
+                self.parse_signal(obj, child)
             elif isinstance(child, node.RegNode | node.MemNode | node.RegfileNode):
                 continue
             else:
