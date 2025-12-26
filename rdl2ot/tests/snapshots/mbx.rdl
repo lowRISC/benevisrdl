@@ -1,0 +1,486 @@
+`include "udp.rdl"
+
+addrmap mbx #(
+    longint NumAlerts = 2
+){
+    bridge = true;
+    signal {
+        signalwidth = 0x1;
+        sigtype = SigType::InterModReq;
+        inter_mod_struct = "logic";
+    } DOE_INTR_SUPPORT;
+
+    signal {
+        signalwidth = 0x1;
+        sigtype = SigType::InterModReq;
+        inter_mod_struct = "logic";
+    } DOE_INTR_EN;
+
+    signal {
+        signalwidth = 0x1;
+        sigtype = SigType::InterModReq;
+        inter_mod_struct = "logic";
+    } DOE_INTR;
+
+    signal {
+        signalwidth = 0x1;
+        sigtype = SigType::InterModReq;
+        inter_mod_struct = "logic";
+    } DOE_ASYNC_MSG_SUPPORT;
+
+    signal {
+        desc = "Incoming RACL policy vector from a racl_ctrl instance.The policy selection vector (parameter) selects the policy for each register.";
+        signalwidth = 0x1;
+        sigtype = SigType::InterModRecv;
+        inter_mod_struct = "racl_policy_vec";
+        inter_mod_package = "top_racl_pkg";
+    } RACL_POLICIES;
+
+    signal {
+        desc = "RACL error log information of this module.";
+        signalwidth = 0x1;
+        sigtype = SigType::InterModReq;
+        inter_mod_struct = "racl_error_log";
+        inter_mod_package = "top_racl_pkg";
+    } RACL_ERROR;
+
+    signal {
+        signalwidth = 0x1;
+        sigtype = SigType::InterModReqRsp;
+        inter_mod_struct = "tl";
+        inter_mod_package = "tlul_pkg";
+    } SRAM_TL_H;
+
+    signal {
+        signalwidth = 0x1;
+        sigtype = SigType::InterModReqRsp;
+        inter_mod_struct = "tl";
+        inter_mod_package = "tlul_pkg";
+    } CORE_TL_D;
+
+    signal {
+        signalwidth = 0x1;
+        sigtype = SigType::InterModReqRsp;
+        inter_mod_struct = "tl";
+        inter_mod_package = "tlul_pkg";
+    } SOC_TL_D;
+
+    signal {
+        desc = "A new object was received in the inbound mailbox.";
+        signalwidth = 0x1;
+        sigtype = SigType::Interrupt;
+    } MBX_READY;
+
+    signal {
+        desc = "An abort request was received from the requester.";
+        signalwidth = 0x1;
+        sigtype = SigType::Interrupt;
+    } MBX_ABORT;
+
+    signal {
+        desc = "The mailbox instance generated an error.";
+        signalwidth = 0x1;
+        sigtype = SigType::Interrupt;
+    } MBX_ERROR;
+
+    signal {
+        desc = "This fatal alert is triggered when a fatal TL-UL bus integrity fault is detected.";
+        signalwidth = 0x1;
+        sigtype = SigType::Alert;
+    } FATAL_FAULT;
+
+    signal {
+        desc = "This recoverable alert is triggered when memory with invalid ECC (e.g., uninitialized memory) or at an invalid address is accessed.";
+        signalwidth = 0x1;
+        sigtype = SigType::Alert;
+    } RECOV_FAULT;
+
+    signal {
+        signalwidth = 0x1;
+        sigtype = SigType::Sync;
+    } CLK_I;
+
+    signal {
+        signalwidth = 0x1;
+        sigtype = SigType::Sync;
+    } RST_NI;
+
+    addrmap {
+        bus_interface_cfg = BusInterfaceCfg'{
+            racl_support : true,
+            direction : BusDirection::Device,
+            protocol : BusProtocol::TlUl,
+            hier_path : "u_hostif.u_regs"
+        };
+        reg {
+            desc = "Interrupt State Register";
+            field {
+                sw = rw;
+                onwrite = woclr;
+                hw = rw;
+                reset = false;
+                desc = "A new object was received in the inbound mailbox.";
+            } MBX_READY[0:0];
+            field {
+                sw = rw;
+                onwrite = woclr;
+                hw = rw;
+                reset = false;
+                desc = "An abort request was received from the requester.";
+            } MBX_ABORT[1:1];
+            field {
+                sw = rw;
+                onwrite = woclr;
+                hw = rw;
+                reset = false;
+                desc = "The mailbox instance generated an error.";
+            } MBX_ERROR[2:2];
+        } INTR_STATE @ 0x0;
+
+        reg {
+            desc = "Interrupt Enable Register";
+            field {
+                sw = rw;
+                hw = r;
+                reset = 0x0;
+                desc = "Enable interrupt when !!INTR_STATE.mbx_ready is set.";
+            } MBX_READY[0:0];
+            field {
+                sw = rw;
+                hw = r;
+                reset = 0x0;
+                desc = "Enable interrupt when !!INTR_STATE.mbx_abort is set.";
+            } MBX_ABORT[1:1];
+            field {
+                sw = rw;
+                hw = r;
+                reset = 0x0;
+                desc = "Enable interrupt when !!INTR_STATE.mbx_error is set.";
+            } MBX_ERROR[2:2];
+        } INTR_ENABLE @ 0x4;
+
+        external reg {
+            desc = "Interrupt Test Register";
+            field {
+                sw = w;
+                hw = r;
+                reset = 0x0;
+                swmod = true;
+                desc = "Write 1 to force !!INTR_STATE.mbx_ready to 1.";
+            } MBX_READY[0:0];
+            field {
+                sw = w;
+                hw = r;
+                reset = 0x0;
+                swmod = true;
+                desc = "Write 1 to force !!INTR_STATE.mbx_abort to 1.";
+            } MBX_ABORT[1:1];
+            field {
+                sw = w;
+                hw = r;
+                reset = 0x0;
+                swmod = true;
+                desc = "Write 1 to force !!INTR_STATE.mbx_error to 1.";
+            } MBX_ERROR[2:2];
+        } INTR_TEST @ 0x8;
+
+        external reg {
+            desc = "Alert Test Register";
+            field {
+                sw = w;
+                hw = r;
+                reset = 0x0;
+                swmod = true;
+                desc = "Write 1 to trigger one alert event of this kind.";
+            } FATAL_FAULT[0:0];
+            field {
+                sw = w;
+                hw = r;
+                reset = 0x0;
+                swmod = true;
+                desc = "Write 1 to trigger one alert event of this kind.";
+            } RECOV_FAULT[1:1];
+        } ALERT_TEST @ 0xC;
+
+        external reg {
+            desc = "DOE mailbox control register visible to OpenTitan";
+            field {
+                sw = rw;
+                hw = rw;
+                reset = 0x0;
+                swmod = true;
+                desc = "Alias of the DoE mailbox abort bit";
+            } ABORT[0:0];
+            field {
+                sw = rw;
+                hw = rw;
+                reset = 0x0;
+                swmod = true;
+                desc = "Set by firmware to signal an error, e.g. unable to provide a response to request.Set by hardware, on SYS.WDATA or SYS.RDATA performing an invalid access.Cleared by the hardware when SYS sets CONTROL.ABORT.";
+            } ERROR[1:1];
+            field {
+                sw = w;
+                hw = r;
+                reset = 0x0;
+                swmod = true;
+                desc = "Indicates an async message request";
+            } SYS_ASYNC_MSG[3:3];
+        } CONTROL @ 0x10;
+
+        external reg {
+            desc = "DOE mailbox status register visible to OpenTitan";
+            field {
+                sw = r;
+                hw = w;
+                reset = 0x1;
+                desc = "Alias of the DoE mailbox busy bit";
+            } BUSY[0:0];
+            field {
+                sw = r;
+                hw = w;
+                reset = 0x0;
+                desc = "Alias of the DoE mailbox interrupt status bit";
+            } SYS_INTR_STATE[1:1];
+            field {
+                sw = r;
+                hw = w;
+                reset = 0x0;
+                desc = "Alias of the DoE mailbox interrupt enable bit";
+            } SYS_INTR_ENABLE[2:2];
+            field {
+                sw = r;
+                hw = w;
+                reset = 0x0;
+                desc = "Alias of the DoE mailbox async message support enable bit";
+            } SYS_ASYNC_ENABLE[3:3];
+        } STATUS @ 0x14;
+
+        reg {
+            desc = "Used to lock the inbound/outbound base/limit configuration registers.";
+            field {
+                sw = rw;
+                onwrite = wzc;
+                hw = na;
+                reset = 0x6;
+                desc = "Once cleared the mailbox inbound/outbound base/limit registers will be locked until the next reset.Default Value = kMultiBitBool4True -> Unlocked at reset.";
+                encode = MultiBitBool4;
+            } REGWEN[3:0];
+        } ADDRESS_RANGE_REGWEN @ 0x18;
+
+        reg {
+            desc = "Used to mark the inbound/outbound base/limit configuration registers to have a valid configuration.";
+            field {
+                sw = rw;
+                hw = r;
+                reset = false;
+                swmod = true;
+                desc = "Once set the mailbox inbound/outbound base/limit registers are valid.";
+            } RANGE_VALID[0:0];
+        } ADDRESS_RANGE_VALID @ 0x1C;
+
+        reg {
+            desc = "Base address of SRAM region, which is used to back up the inbound mailbox data.This address is 4-byte aligned, the lower 2 bits are ignored.";
+            field {
+                sw = rw;
+                hw = r;
+                reset = 0x0;
+                desc = "Base address of SRAM region, which is used to back up the inbound mailbox data.";
+            } BASE_ADDRESS[31:2];
+        } INBOUND_BASE_ADDRESS @ 0x20;
+
+        reg {
+            desc = "Inclusive end address of the inbound mailbox memory range in the private SRAM.This address is 4-byte aligned and it specifies the start address of the final validDWORD location. The lower 2 bits are ignored.";
+            field {
+                sw = rw;
+                hw = r;
+                reset = 0x0;
+                desc = "Limit Address to mark the end of the inbound mailbox memory range in the private SRAM.";
+            } LIMIT[31:2];
+        } INBOUND_LIMIT_ADDRESS @ 0x24;
+
+        external reg {
+            desc = "Write pointer for the next inbound DWORD write (32 bits).Pointer is initialized to the Inbox memory base address before the start of a transfer.Inbox handler maintains the updated pointer as data DWORDs are received by the DOE inbox.This pointer is 4-byte aligned; the lower 2 bits are always zero.";
+            field {
+                sw = r;
+                hw = w;
+                reset = 0x0;
+                desc = "Write pointer for the next inbound data write.";
+            } INBOUND_WRITE_PTR[31:2];
+        } INBOUND_WRITE_PTR @ 0x28;
+
+        reg {
+            desc = "Base address of SRAM region, which is used to buffer the outbound mailbox data.This address is 4-byte aligned, the lower 2 bits are ignored.";
+            field {
+                sw = rw;
+                hw = r;
+                reset = 0x0;
+                desc = "Base address of SRAM region, which is used to buffer the outbound mailbox data.";
+            } BASE_ADDRESS[31:2];
+        } OUTBOUND_BASE_ADDRESS @ 0x2C;
+
+        reg {
+            desc = "Inclusive end address of the outbound mailbox memory range in the private SRAM.This address is 4-byte aligned and it specifies the start address of the final validDWORD location. The lower 2 bits are ignored.";
+            field {
+                sw = rw;
+                hw = r;
+                reset = 0x0;
+                desc = "Limit Address to mark the end of the outbound mailbox memory range in the private SRAM.";
+            } LIMIT[31:2];
+        } OUTBOUND_LIMIT_ADDRESS @ 0x30;
+
+        external reg {
+            desc = "Read pointer for the next outbound DWORD read.Pointer is initialized to the Outbox memory base address before the start of an outgoingobject transfer. Outbox handler maintains the updated pointer as data DWORDs are readfrom the DOE instance by the requester.This pointer is 4-byte aligned; the lower 2 bits are always zero.";
+            field {
+                sw = r;
+                hw = w;
+                reset = 0x0;
+                desc = "Read pointer for the next outbound data read.";
+            } OUTBOUND_READ_PTR[31:2];
+        } OUTBOUND_READ_PTR @ 0x34;
+
+        reg {
+            desc = "Indicates the size of the data object to be transferred out.Note that this size specifies the number of DWORDs (32 bits).Maximum size supported by any OT DOE instance is 1024 DWORDs.";
+            field {
+                sw = rw;
+                hw = rw;
+                reset = 0x0;
+                swmod = true;
+                desc = "Indicates the size of the data object to be transferred out in 4-byte words.";
+            } CNT[10:0];
+        } OUTBOUND_OBJECT_SIZE @ 0x38;
+
+        external reg {
+            desc = "Software read-only alias of the DOE_INTR_MSG_ADDR register of the SoC interface for convenient access of the OT firmware.Defined only for FW-to-FW mailboxes.";
+            field {
+                sw = r;
+                hw = w;
+                reset = 0x0;
+                desc = "Utilized by the mailbox responder to send an interrupt message to the requester via a write to the configured address.";
+            } DOE_INTR_MSG_ADDR[31:0];
+        } DOE_INTR_MSG_ADDR @ 0x3C;
+
+        external reg {
+            desc = "Software read-only alias of the DOE_INTR_MSG_DATA register of the SoC interface for convenient access of the OT firmware.Defined only for FW-to-FW mailboxes.";
+            field {
+                sw = r;
+                hw = w;
+                reset = 0x0;
+                desc = "Interrupt message data to be sent to the address configured in the DOE_INTR_MSG_ADDR register.";
+            } DOE_INTR_MSG_DATA[31:0];
+        } DOE_INTR_MSG_DATA @ 0x40;
+
+        INBOUND_BASE_ADDRESS.BASE_ADDRESS -> mubi_swwe = ADDRESS_RANGE_REGWEN.REGWEN;
+        INBOUND_LIMIT_ADDRESS.LIMIT -> mubi_swwe = ADDRESS_RANGE_REGWEN.REGWEN;
+        OUTBOUND_BASE_ADDRESS.BASE_ADDRESS -> mubi_swwe = ADDRESS_RANGE_REGWEN.REGWEN;
+        OUTBOUND_LIMIT_ADDRESS.LIMIT -> mubi_swwe = ADDRESS_RANGE_REGWEN.REGWEN;
+    } CORE;
+
+    addrmap {
+        bus_interface_cfg = BusInterfaceCfg'{
+            racl_support : true,
+            direction : BusDirection::Device,
+            protocol : BusProtocol::TlUl,
+            hier_path : "u_sysif.u_regs"
+        };
+        external reg {
+            desc = "DOE mailbox control register.";
+            field {
+                sw = w;
+                hw = rw;
+                reset = 0x0;
+                swmod = true;
+                desc = "A write of 1 to this bit causes all data object transfer operations associated with this DOE instance to be aborted.";
+            } ABORT[0:0];
+            field {
+                sw = rw;
+                hw = rw;
+                reset = 0x0;
+                swmod = true;
+                desc = "If DOE interrupt support is set, when this bit is set and MSI/MSI-X is enabled in MSI capability registers, the DOE instance must issue an MSI/MSI-X interrupt.";
+            } DOE_INTR_EN[1:1];
+            field {
+                sw = rw;
+                hw = rw;
+                reset = 0x0;
+                swmod = true;
+                desc = "If DOE Async Message Support is Set, this bit, when Set, enables the use of the DOE Async Message mechanism.When this bit is set, it allows the DOE instance to raise the SOC_STATUS.doe_async_msg_status, indicating an asynchronous message request.";
+            } DOE_ASYNC_MSG_EN[3:3];
+            field {
+                sw = w;
+                hw = rw;
+                reset = 0x0;
+                swmod = true;
+                desc = "A write of 1 to this bit indicates to the DOE instance that it can start consuming the data object transferred through the DOE Write Data Mailbox register.";
+            } GO[31:31];
+        } SOC_CONTROL @ 0x8;
+
+        reg {
+            desc = "DOE mailbox status register";
+            field {
+                sw = r;
+                hw = rw;
+                reset = 0x1;
+                desc = "When Set, this bit indicates the DOE instance is temporarily unable to receive a new data object through the DOE Write Data Mailbox register.This bit is also set by the DOE instance when processing an abort command and remains set until abort handling is complete.";
+            } BUSY[0:0];
+            field {
+                sw = rw;
+                onwrite = woclr;
+                hw = rw;
+                reset = 0x0;
+                desc = "This bit is set when an interrupt event occurs. Writing a value of 1 to this bit clears the status bit.";
+            } DOE_INTR_STATUS[1:1];
+            field {
+                sw = r;
+                hw = rw;
+                reset = 0x0;
+                desc = "When Set, this bit indicates that there has been an internal error associated with data object received, or that a data object has been received for which the DOE instance is unable to provide a response.The transition of this bit from Clear to Set is an interrupt-triggering event.";
+            } ERROR[2:2];
+            field {
+                sw = r;
+                hw = w;
+                reset = 0x0;
+                desc = "This bit, when Set, indicates the DOE instance has one or more asynchronous messages to transfer.The transition of this bit from Clear to Set is an interrupt-triggering event.This bit is set when an interrupt event occurs.";
+            } DOE_ASYNC_MSG_STATUS[3:3];
+            field {
+                sw = r;
+                hw = rw;
+                reset = 0x0;
+                desc = "When Set, this bit indicates the DOE instance has a data object available to be read by SoC firmware/software.The transition of this bit from Clear to Set is an interrupt-triggering event.";
+            } READY[31:31];
+        } SOC_STATUS @ 0xC;
+
+        reg {
+            desc = "Utilized by the mailbox responder to send an interrupt message to the requester via a write to the configured address.Defined only for FW-to-FW mailboxes.";
+            field {
+                sw = rw;
+                hw = r;
+                reset = 0x0;
+                desc = "Utilized by the mailbox responder to send an interrupt message to the requester via a write to the configured address.";
+            } DOE_INTR_MSG_ADDR[31:0];
+        } SOC_DOE_INTR_MSG_ADDR @ 0x18;
+
+        reg {
+            desc = "Interrupt message data to be sent to the address configured in the DOE_INTR_MSG_ADDR register.Defined only for FW-to-FW mailboxes.";
+            field {
+                sw = rw;
+                hw = r;
+                reset = 0x0;
+                desc = "Interrupt message data to be sent to the address configured in the DOE_INTR_MSG_ADDR register.";
+            } DOE_INTR_MSG_DATA[31:0];
+        } SOC_DOE_INTR_MSG_DATA @ 0x1C;
+
+        external mem {
+            memwidth = 0x20;
+            mementries = 0x1;
+            sw = rw;
+        } WDATA @ 0x10;
+
+        external mem {
+            memwidth = 0x20;
+            mementries = 0x1;
+            sw = rw;
+        } RDATA @ 0x14;
+
+    } SOC;
+
+};
