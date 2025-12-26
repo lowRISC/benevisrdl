@@ -22,18 +22,18 @@ def main() -> None:
 @main.command()
 @click.argument(
     "input_file",
-    type=click.Path(writable=True),
+    type=click.Path(path_type=Path, writable=False),
 )
 @click.argument(
     "out_dir",
     default="./result",
-    type=click.Path(writable=True),
+    type=click.Path(path_type=Path, writable=True),
 )
 @click.option(
     "--soc",
     is_flag=True,
 )
-def export_rtl(input_file: str, out_dir: str, soc: bool = False) -> None:
+def export_rtl(input_file: Path, out_dir: Path, soc: bool = False) -> None:
     """Export opentitan rtl.
 
     INPUT_FILE: The input RDL
@@ -46,6 +46,6 @@ def export_rtl(input_file: str, out_dir: str, soc: bool = False) -> None:
     rdlc.compile_file(input_file)
     root = rdlc.elaborate()
 
-    rtl_exporter.run(root.top, Path(out_dir), soc)
+    rtl_exporter.run(root.top, out_dir, soc)
 
     print("Successfully finished!\n")
