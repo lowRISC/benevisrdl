@@ -51,6 +51,18 @@ def test_cli_lc_ctrl_from_file(tmp_path: Path) -> None:
     _run_ip_test_from_file(tmp_path, "lc_ctrl")
 
 
+def test_cli_arrays_from_file(tmp_path: Path) -> None:
+    """Regression test for register array export.
+
+    Covers both branches of ``RdlExporter._arrays``: a plain register (``CTRL``)
+    and a register array (``DATA[4]``). Guards against relying on attributes that
+    only exist on elaborated ``Node`` objects (e.g. ``is_array``, removed from raw
+    ``Component`` objects in systemrdl-compiler 1.32.2) rather than ``Component``
+    ones (``array_dimensions``).
+    """
+    _run_ip_test_from_file(tmp_path, "arrays")
+
+
 def test_importer(tmp_path: Path) -> None:
     """Test with the SystemRDL importer."""
     input_rdl = SNAPSHOTS_DIR / "generic.rdl"

@@ -1,0 +1,22 @@
+`include "user_defined.rdl"
+
+addrmap arrays {
+    reg {
+        field {
+            desc = "Enable the block.";
+            sw = rw;
+            hw = r;
+            reset = 0x0;
+        } EN[0:0];
+    } CTRL @ 0x0;
+
+    reg {
+        field {
+            desc = "Data word.";
+            sw = rw;
+            hw = r;
+            reset = 0x0;
+        } VAL[31:0];
+    } DATA[4] @ 0x4;
+
+};
