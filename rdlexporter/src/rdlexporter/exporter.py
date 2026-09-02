@@ -131,7 +131,7 @@ class RdlExporter:
                 print(f"Warning: Type {type(obj)} not implemented, skipping it.")
 
     def _arrays(self, component: Reg) -> str:
-        if not component.is_array:
+        if component.array_dimensions is None:
             return ""
 
         if len(component.array_dimensions) > 1:
